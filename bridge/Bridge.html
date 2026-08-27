@@ -12,67 +12,72 @@
 
   const TRUSTED_PARENT_ORIGIN='https://magasincoffee.github.io';
   const READY_TYPE='MAGASIN_BRIDGE_READY';
-  const INIT_TYPE='MAGASIN_BRIDGE_INIT';
   const REQUEST_TYPE='MAGASIN_BRIDGE_REQUEST';
   const RESPONSE_TYPE='MAGASIN_BRIDGE_RESPONSE';
 
-  function postToParent_(message,origin){
-    try{window.parent.postMessage(message,origin||TRUSTED_PARENT_ORIGIN);}catch(err){}
+  function getBridgeId_(){
+    try{
+      return String(new URLSearchParams(window.location.search).get('bridgeId') || '').trim();
+    }catch(err){
+      return '';
+    }
   }
 
   function sendReady_(){
-    postToParent_({
-      type:READY_TYPE,
-      version:'20260827-05'
-    },TRUSTED_PARENT_ORIGIN);
+    const bridgeId=getBridgeId_();
+    const channel=new MessageChannel();
+    const port=channel.port1;
+
+    port.onmessage=function(event){
+      const data=event.data||{};
+      if(data.type!==REQUEST_TYPE)return;
+
+      const requestId=String(data.requestId||'');
+      const action=String(data.action||'').trim();
+      const payload=data.payload&&typeof data.payload==='object'?data.payload:{};
+      const sessionToken=String(data.sessionToken||'').trim();
+
+      if(!requestId||!action)return;
+
+      google.script.run
+        .withSuccessHandler(function(result){
+          port.postMessage({
+            type:RESPONSE_TYPE,
+            requestId:requestId,
+            ok:!!(result&&result.ok!==false),
+            result:result||{ok:false,message:'Bridge không trả về dữ liệu.'}
+          });
+        })
+        .withFailureHandler(function(error){
+          port.postMessage({
+            type:RESPONSE_TYPE,
+            requestId:requestId,
+            ok:false,
+            result:{
+              ok:false,
+              message:String(error&&error.message||error||'Bridge execution failed.')
+            }
+          });
+        })
+        .magasinBridgeCall(action,payload,sessionToken);
+    };
+
+    if(port.start)port.start();
+
+    try{
+      window.top.postMessage({
+        type:READY_TYPE,
+        version:'20260827-06',
+        bridgeId:bridgeId
+      },TRUSTED_PARENT_ORIGIN,[channel.port2]);
+    }catch(err){
+      // Do not fall back to window.parent: Apps Script wraps user HTML
+      // in a Google-controlled iframe whose origin is not the GitHub page.
+    }
   }
 
-  window.addEventListener('message',function(event){
-    if(event.origin!==TRUSTED_PARENT_ORIGIN)return;
-    if(!event.source||event.source!==window.parent)return;
-
-    const data=event.data||{};
-
-    if(data.type===INIT_TYPE){
-      sendReady_();
-      return;
-    }
-
-    if(data.type!==REQUEST_TYPE)return;
-
-    const requestId=String(data.requestId||'');
-    const action=String(data.action||'').trim();
-    const payload=data.payload&&typeof data.payload==='object'?data.payload:{};
-    const sessionToken=String(data.sessionToken||'').trim();
-
-    if(!requestId||!action)return;
-
-    google.script.run
-      .withSuccessHandler(function(result){
-        postToParent_({
-          type:RESPONSE_TYPE,
-          requestId:requestId,
-          ok:!!(result&&result.ok!==false),
-          result:result||{ok:false,message:'Bridge không trả về dữ liệu.'}
-        },TRUSTED_PARENT_ORIGIN);
-      })
-      .withFailureHandler(function(error){
-        postToParent_({
-          type:RESPONSE_TYPE,
-          requestId:requestId,
-          ok:false,
-          result:{
-            ok:false,
-            message:String(error&&error.message||error||'Bridge execution failed.')
-          }
-        },TRUSTED_PARENT_ORIGIN);
-      })
-      .magasinBridgeCall(action,payload,sessionToken);
-  });
-
   sendReady_();
-  window.setTimeout(sendReady_,150);
-})();
+  window.setTimeout(sendReady_,500);
 </script>
 </body>
 </html>
