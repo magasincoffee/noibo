@@ -27,7 +27,6 @@ const MAGASIN_SYNC_CONFIG = {
   ref: 'main',
   githubRawBase: 'https://raw.githubusercontent.com/magasincoffee/noibo/main/',
 
-  // Chỉ đồng bộ các file này khi chúng tồn tại trên GitHub.
   canonicalFiles: [
     'backend/01_Cấu_hình_hệ_thống.gs',
     'backend/02_Nền_tảng_hệ_thống.gs',
@@ -59,15 +58,10 @@ const MAGASIN_SYNC_CONFIG = {
   ]
 };
 
-/**
- * Test 1: kiểm tra Apps Script API có thể đọc project hiện tại không.
- * Đây là hàm PUBLIC để có thể chọn trong danh sách Run.
- */
 function testDongBoGitHub() {
   const scriptId = ScriptApp.getScriptId();
   const content = getAppsScriptProjectContent_(scriptId);
-
-  return {
+  const result = {
     ok: true,
     message: 'Apps Script API đã đọc được project hiện tại.',
     scriptId: scriptId,
@@ -76,35 +70,24 @@ function testDongBoGitHub() {
       return file.name + ' [' + file.type + ']';
     })
   };
+  Logger.log(JSON.stringify(result, null, 2));
+  return result;
 }
 
-/**
- * Test 2: đọc toàn bộ canonical source từ GitHub, chưa ghi gì vào Apps Script.
- */
 function previewDongBoGitHub() {
   const githubFiles = loadCanonicalGithubFiles_();
-
-  return {
+  const result = {
     ok: true,
     message: 'Đọc canonical source từ GitHub thành công. Chưa thay đổi Apps Script.',
+    repo: MAGASIN_SYNC_CONFIG.repo,
     ref: MAGASIN_SYNC_CONFIG.ref,
     files: Object.keys(githubFiles),
     count: Object.keys(githubFiles).length
   };
+  Logger.log(JSON.stringify(result, null, 2));
+  return result;
 }
 
-/**
- * Đồng bộ GitHub main → Apps Script HEAD.
- *
- * An toàn theo nguyên tắc:
- * - đọc content hiện tại;
- * - tải canonical source từ GitHub;
- * - backup HEAD hiện tại bằng Version API;
- * - merge/replace các file canonical;
- * - không xóa các file khác;
- * - updateContent;
- * - KHÔNG tự deploy.
- */
 function dongBoGitHubSangAppsScript() {
   const scriptId = ScriptApp.getScriptId();
   const current = getAppsScriptProjectContent_(scriptId);
@@ -114,13 +97,11 @@ function dongBoGitHubSangAppsScript() {
     throw new Error('GitHub không có frontend/Index.html. Hủy đồng bộ để tránh ghi sai project.');
   }
 
-  // Backup HEAD hiện tại trước khi update.
   const backup = createAppsScriptVersion_(scriptId, 'MAGASIN backup before GitHub sync ' + new Date().toISOString());
-
   const merged = mergeGithubIntoAppsScript_(current, githubFiles);
   const updated = updateAppsScriptProjectContent_(scriptId, merged);
 
-  return {
+  const result = {
     ok: true,
     message: 'Đồng bộ GitHub → Apps Script thành công. Chưa tự deploy.',
     backupVersionNumber: backup && backup.versionNumber ? backup.versionNumber : null,
@@ -129,6 +110,8 @@ function dongBoGitHubSangAppsScript() {
     resultingFileCount: (updated.files || []).length,
     nextStep: 'Kiểm tra WebApp rồi mới tạo deployment/version production.'
   };
+  Logger.log(JSON.stringify(result, null, 2));
+  return result;
 }
 
 /* ======================== GITHUB ======================== */
@@ -168,22 +151,18 @@ function encodeGithubPath_(path) {
 /* ======================== APPS SCRIPT API ======================== */
 
 function getAppsScriptProjectContent_(scriptId) {
-  const response = appsScriptApiFetch_('/projects/' + encodeURIComponent(scriptId) + '/content', {
+  return appsScriptApiFetch_('/projects/' + encodeURIComponent(scriptId) + '/content', {
     method: 'get'
   });
-
-  return response;
 }
 
 function createAppsScriptVersion_(scriptId, description) {
-  const response = appsScriptApiFetch_('/projects/' + encodeURIComponent(scriptId) + '/versions', {
+  return appsScriptApiFetch_('/projects/' + encodeURIComponent(scriptId) + '/versions', {
     method: 'post',
     payload: {
       description: String(description || 'MAGASIN backup')
     }
   });
-
-  return response;
 }
 
 function updateAppsScriptProjectContent_(scriptId, content) {
@@ -265,8 +244,6 @@ function mergeGithubIntoAppsScript_(currentContent, githubFiles) {
     }
   });
 
-  // updateContent cần giữ file manifest/config nếu project đang có.
-  // Các file khác cũng được giữ nguyên để tránh xóa ngoài ý muốn.
   return {
     files: currentFiles
   };
