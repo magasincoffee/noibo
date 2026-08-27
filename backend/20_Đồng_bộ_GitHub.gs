@@ -1,32 +1,26 @@
 /* =========================================================
-   MAGASIN — ĐỒNG BỘ GITHUB → APPS SCRIPT
-   PHASE: Source synchronization
+   MAGASIN — ĐỒNG BỘ GITHUB → APPS SCRIPT V2
+   PHASE: Clean source synchronization
 
-   MỤC TIÊU
-   - GitHub main là source-of-truth cho backend/ + frontend/.
+   QUY TẮC:
+   - GitHub main là source-of-truth.
    - Apps Script là runtime.
-   - Đồng bộ có kiểm tra, không tự động deploy.
-   - Không xóa file Apps Script chưa nằm trong danh sách canonical.
-   - Không lưu mật khẩu/token GitHub trong source.
+   - Mỗi lần sync sẽ THAY TOÀN BỘ HEAD bằng đúng manifest + canonical files.
+   - Không merge và không giữ file legacy ngoài danh sách canonical.
+   - Luôn tạo backup Version trước khi update.
+   - Không tự deploy.
 
-   YÊU CẦU MỘT LẦN
-   1) Apps Script project phải được cấp OAuth scope:
-      https://www.googleapis.com/auth/script.projects
-   2) Google Apps Script API phải được bật cho Cloud Project của Apps Script.
-   3) Chạy testDongBoGitHub() trước khi chạy dongBoGitHubSangAppsScript().
-
-   QUAN TRỌNG
-   projects.updateContent() thay toàn bộ HEAD content của project.
-   Vì vậy module này luôn đọc nội dung hiện tại trước, chỉ thay/ghép
-   các file canonical backend/ + frontend/, rồi mới gửi toàn bộ content.
-   File khác đang tồn tại trong Apps Script được giữ nguyên.
+   LƯU Ý QUAN TRỌNG:
+   Apps Script Files API dùng name KHÔNG có phần mở rộng.
+   Ví dụ: 01_Cấu_hình_hệ_thống.gs -> name = 01_Cấu_hình_hệ_thống.
+   Manifest -> name = appsscript, type = JSON.
 ========================================================= */
 
 const MAGASIN_SYNC_CONFIG = {
   repo: 'magasincoffee/noibo',
   ref: 'main',
-  githubRawBase: 'https://raw.githubusercontent.com/magasincoffee/noibo/main/',
-
+  rawBase: 'https://raw.githubusercontent.com/magasincoffee/noibo/main/',
+  manifestPath: 'PROJECT_CONTROL/appsscript.json',
   canonicalFiles: [
     'backend/01_Cấu_hình_hệ_thống.gs',
     'backend/02_Nền_tảng_hệ_thống.gs',
@@ -75,14 +69,54 @@ function testDongBoGitHub() {
 }
 
 function previewDongBoGitHub() {
-  const githubFiles = loadCanonicalGithubFiles_();
+  const project = buildCanonicalProjectContent_();
   const result = {
     ok: true,
-    message: 'Đọc canonical source từ GitHub thành công. Chưa thay đổi Apps Script.',
+    message: 'Đọc GitHub canonical thành công. Chưa thay đổi Apps Script.',
     repo: MAGASIN_SYNC_CONFIG.repo,
     ref: MAGASIN_SYNC_CONFIG.ref,
-    files: Object.keys(githubFiles),
-    count: Object.keys(githubFiles).length
+    targetFileCount: project.files.length,
+    targetFiles: project.files.map(function(file) {
+      return file.name + ' [' + file.type + ']';
+    })
+  };
+  Logger.log(JSON.stringify(result, null, 2));
+  return result;
+}
+
+function previewDongBoGitHubSyncPlan() {
+  const scriptId = ScriptApp.getScriptId();
+  const current = getAppsScriptProjectContent_(scriptId);
+  const target = buildCanonicalProjectContent_();
+
+  const currentMap = mapFilesByName_(current.files || []);
+  const targetMap = mapFilesByName_(target.files || []);
+
+  const toAdd = [];
+  const toReplace = [];
+  const toRemove = [];
+
+  Object.keys(targetMap).forEach(function(name) {
+    if (!currentMap[name]) {
+      toAdd.push(name);
+    } else if (currentMap[name].type !== targetMap[name].type ||
+               currentMap[name].source !== targetMap[name].source) {
+      toReplace.push(name);
+    }
+  });
+
+  Object.keys(currentMap).forEach(function(name) {
+    if (!targetMap[name]) toRemove.push(name);
+  });
+
+  const result = {
+    ok: true,
+    message: 'Sync plan đã tạo. Chưa thay đổi Apps Script.',
+    currentFileCount: Object.keys(currentMap).length,
+    targetFileCount: Object.keys(targetMap).length,
+    toAdd: toAdd,
+    toReplace: toReplace,
+    toRemove: toRemove
   };
   Logger.log(JSON.stringify(result, null, 2));
   return result;
@@ -91,55 +125,105 @@ function previewDongBoGitHub() {
 function dongBoGitHubSangAppsScript() {
   const scriptId = ScriptApp.getScriptId();
   const current = getAppsScriptProjectContent_(scriptId);
-  const githubFiles = loadCanonicalGithubFiles_();
+  const target = buildCanonicalProjectContent_();
+  const targetMap = mapFilesByName_(target.files);
+  const currentMap = mapFilesByName_(current.files || []);
 
-  if (!githubFiles['frontend/Index.html']) {
-    throw new Error('GitHub không có frontend/Index.html. Hủy đồng bộ để tránh ghi sai project.');
+  if (!targetMap.appsscript || targetMap.appsscript.type !== 'JSON') {
+    throw new Error('GitHub canonical project thiếu appsscript.json hợp lệ. Đã hủy sync.');
+  }
+  if (!targetMap.Index || targetMap.Index.type !== 'HTML') {
+    throw new Error('GitHub canonical project thiếu frontend/Index.html hợp lệ. Đã hủy sync.');
   }
 
-  const backup = createAppsScriptVersion_(scriptId, 'MAGASIN backup before GitHub sync ' + new Date().toISOString());
-  const merged = mergeGithubIntoAppsScript_(current, githubFiles);
-  const updated = updateAppsScriptProjectContent_(scriptId, merged);
+  const backup = createAppsScriptVersion_(
+    scriptId,
+    'MAGASIN backup before CLEAN GitHub sync ' + new Date().toISOString()
+  );
+
+  const updated = updateAppsScriptProjectContent_(scriptId, target);
+
+  const removed = Object.keys(currentMap).filter(function(name) {
+    return !targetMap[name];
+  });
 
   const result = {
     ok: true,
-    message: 'Đồng bộ GitHub → Apps Script thành công. Chưa tự deploy.',
+    message: 'CLEAN SYNC GitHub → Apps Script thành công. Apps Script HEAD hiện khớp canonical GitHub. Chưa tự deploy.',
+    repo: MAGASIN_SYNC_CONFIG.repo,
+    ref: MAGASIN_SYNC_CONFIG.ref,
     backupVersionNumber: backup && backup.versionNumber ? backup.versionNumber : null,
-    synchronizedFiles: Object.keys(githubFiles),
-    synchronizedCount: Object.keys(githubFiles).length,
+    targetFileCount: target.files.length,
     resultingFileCount: (updated.files || []).length,
-    nextStep: 'Kiểm tra WebApp rồi mới tạo deployment/version production.'
+    removedLegacyFileCount: removed.length,
+    removedLegacyFiles: removed,
+    nextStep: 'Chạy testDongBoGitHub(), kiểm tra compile, rồi deploy Web App có kiểm soát.'
   };
   Logger.log(JSON.stringify(result, null, 2));
   return result;
 }
 
-/* ======================== GITHUB ======================== */
+function buildCanonicalProjectContent_() {
+  const manifestSource = fetchGithubFile_(MAGASIN_SYNC_CONFIG.manifestPath);
+  let manifest;
+  try {
+    manifest = JSON.parse(manifestSource);
+  } catch (err) {
+    throw new Error('PROJECT_CONTROL/appsscript.json không phải JSON hợp lệ: ' + err.message);
+  }
 
-function loadCanonicalGithubFiles_() {
-  const requests = MAGASIN_SYNC_CONFIG.canonicalFiles.map(function(path) {
-    return {
-      url: MAGASIN_SYNC_CONFIG.githubRawBase + encodeGithubPath_(path),
-      muteHttpExceptions: true,
-      followRedirects: true
-    };
-  });
+  const files = [{
+    name: 'appsscript',
+    type: 'JSON',
+    source: JSON.stringify(manifest, null, 2)
+  }];
 
-  const responses = UrlFetchApp.fetchAll(requests);
-  const result = {};
+  const seen = { appsscript: true };
 
-  responses.forEach(function(response, index) {
-    const path = MAGASIN_SYNC_CONFIG.canonicalFiles[index];
-    const code = response.getResponseCode();
+  MAGASIN_SYNC_CONFIG.canonicalFiles.forEach(function(path) {
+    const source = fetchGithubFile_(path);
+    const file = toAppsScriptFile_(path, source);
 
-    if (code < 200 || code >= 300) {
-      throw new Error('Không tải được ' + path + ' từ GitHub (HTTP ' + code + ').');
+    if (seen[file.name]) {
+      throw new Error('Trùng tên file Apps Script trong canonical source: ' + file.name);
     }
-
-    result[path] = response.getContentText('UTF-8');
+    seen[file.name] = true;
+    files.push(file);
   });
 
-  return result;
+  return { files: files };
+}
+
+function fetchGithubFile_(path) {
+  const url = MAGASIN_SYNC_CONFIG.rawBase + encodeGithubPath_(path);
+  const response = UrlFetchApp.fetch(url, {
+    muteHttpExceptions: true,
+    followRedirects: true
+  });
+  const code = response.getResponseCode();
+  if (code < 200 || code >= 300) {
+    throw new Error('Không tải được ' + path + ' từ GitHub (HTTP ' + code + ').');
+  }
+  return response.getContentText('UTF-8');
+}
+
+function toAppsScriptFile_(path, source) {
+  const baseName = path.split('/').pop();
+  if (/\.gs$/i.test(baseName)) {
+    return {
+      name: baseName.replace(/\.gs$/i, ''),
+      type: 'SERVER_JS',
+      source: source
+    };
+  }
+  if (/\.html$/i.test(baseName)) {
+    return {
+      name: baseName.replace(/\.html$/i, ''),
+      type: 'HTML',
+      source: source
+    };
+  }
+  throw new Error('Loại file canonical không được hỗ trợ: ' + path);
 }
 
 function encodeGithubPath_(path) {
@@ -148,7 +232,13 @@ function encodeGithubPath_(path) {
   }).join('/');
 }
 
-/* ======================== APPS SCRIPT API ======================== */
+function mapFilesByName_(files) {
+  const map = {};
+  (files || []).forEach(function(file) {
+    if (file && file.name) map[file.name] = file;
+  });
+  return map;
+}
 
 function getAppsScriptProjectContent_(scriptId) {
   return appsScriptApiFetch_('/projects/' + encodeURIComponent(scriptId) + '/content', {
@@ -159,9 +249,7 @@ function getAppsScriptProjectContent_(scriptId) {
 function createAppsScriptVersion_(scriptId, description) {
   return appsScriptApiFetch_('/projects/' + encodeURIComponent(scriptId) + '/versions', {
     method: 'post',
-    payload: {
-      description: String(description || 'MAGASIN backup')
-    }
+    payload: { description: String(description || 'MAGASIN backup') }
   });
 }
 
@@ -178,14 +266,11 @@ function appsScriptApiFetch_(path, options) {
     throw new Error('Không lấy được OAuth token của Apps Script.');
   }
 
-  const base = 'https://script.googleapis.com/v1';
   const params = {
     method: options.method || 'get',
     muteHttpExceptions: true,
     followRedirects: true,
-    headers: {
-      Authorization: 'Bearer ' + token
-    },
+    headers: { Authorization: 'Bearer ' + token },
     contentType: 'application/json'
   };
 
@@ -193,11 +278,11 @@ function appsScriptApiFetch_(path, options) {
     params.payload = JSON.stringify(options.payload);
   }
 
-  const response = UrlFetchApp.fetch(base + path, params);
+  const response = UrlFetchApp.fetch('https://script.googleapis.com/v1' + path, params);
   const code = response.getResponseCode();
   const text = response.getContentText('UTF-8');
 
-  let data = null;
+  let data = {};
   try {
     data = text ? JSON.parse(text) : {};
   } catch (err) {
@@ -205,46 +290,9 @@ function appsScriptApiFetch_(path, options) {
   }
 
   if (code < 200 || code >= 300) {
-    const detail = data && data.error && data.error.message
-      ? data.error.message
-      : text;
+    const detail = data && data.error && data.error.message ? data.error.message : text;
     throw new Error('Apps Script API HTTP ' + code + ': ' + detail);
   }
 
   return data;
-}
-
-/* ======================== MERGE ======================== */
-
-function mergeGithubIntoAppsScript_(currentContent, githubFiles) {
-  const currentFiles = Array.isArray(currentContent.files)
-    ? currentContent.files.slice()
-    : [];
-
-  const indexByName = {};
-  currentFiles.forEach(function(file, index) {
-    if (file && file.name) indexByName[file.name] = index;
-  });
-
-  Object.keys(githubFiles).forEach(function(path) {
-    const appsName = path.split('/').pop();
-    const source = githubFiles[path];
-    const type = /\.html$/i.test(appsName) ? 'HTML' : 'SERVER_JS';
-
-    const nextFile = {
-      name: appsName,
-      type: type,
-      source: source
-    };
-
-    if (Object.prototype.hasOwnProperty.call(indexByName, appsName)) {
-      currentFiles[indexByName[appsName]] = nextFile;
-    } else {
-      currentFiles.push(nextFile);
-    }
-  });
-
-  return {
-    files: currentFiles
-  };
 }
