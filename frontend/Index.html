@@ -12,15 +12,27 @@
     <?!= include('_styles'); ?>
   </style>
   <style>
-    /* PHASE 2: sessionStorage có token => ẩn Login ngay trong lúc backend xác nhận session. */
-    html.magasin-session-pending .card{display:none!important}
+    /* PHASE 2: không cho Login first-paint khi đã có session token ở
+       sessionStorage hoặc token legacy còn nằm trong localStorage. */
+    html.magasin-session-pending .card{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important}
+    html.magasin-app-booting .card{visibility:hidden!important;opacity:0!important;pointer-events:none!important}
+    html.magasin-app-booting #app{visibility:hidden!important;opacity:0!important;pointer-events:none!important}
   </style>
   <script>
-    /* Chạy trước khi body render để tránh Login flash khi F5/reload. */
+    /* Chạy trước khi body render.
+       Kiểm tra cả sessionStorage và localStorage legacy để chặn Login flash
+       trong trường hợp trình duyệt/iframe không khôi phục sessionStorage. */
     (function(){
       try{
-        if(window.sessionStorage.getItem('magasin_session_token')){
+        var key='magasin_session_token';
+        var hasToken=false;
+        try{hasToken=!!window.sessionStorage.getItem(key);}catch(err){}
+        if(!hasToken){
+          try{hasToken=!!window.localStorage.getItem(key);}catch(err){}
+        }
+        if(hasToken){
           document.documentElement.classList.add('magasin-session-pending');
+          document.documentElement.classList.add('magasin-app-booting');
         }
       }catch(err){}
     })();
