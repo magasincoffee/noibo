@@ -54,7 +54,8 @@ function include(filename) {
     '_auth',
     '_schedule',
     '_attendance',
-    '_management'
+    '_management',
+    '_phase2_ui_fix'
   ];
 
   if (allowed.indexOf(name) === -1) {
@@ -72,6 +73,7 @@ function include(filename) {
      * - _schedule   = JavaScript thuần
      * - _attendance = JavaScript thuần
      * - _management = JavaScript thuần
+     * - _phase2_ui_fix = JavaScript/UI fix thuần
      *
      * Index.html tự bọc partial bằng <style>/<script>.
      */
