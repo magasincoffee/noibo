@@ -11,6 +11,20 @@
   <style id="magasinStyles">
     <?!= include('_styles'); ?>
   </style>
+  <style>
+    /* PHASE 2: sessionStorage có token => ẩn Login ngay trong lúc backend xác nhận session. */
+    html.magasin-session-pending .card{display:none!important}
+  </style>
+  <script>
+    /* Chạy trước khi body render để tránh Login flash khi F5/reload. */
+    (function(){
+      try{
+        if(window.sessionStorage.getItem('magasin_session_token')){
+          document.documentElement.classList.add('magasin-session-pending');
+        }
+      }catch(err){}
+    })();
+  </script>
 </head>
 <body>
 <main class="card"><section class="brand"><div class="mark"><svg class="magasin-logo" viewBox="0 0 100 100" aria-label="MAGASIN" role="img">
@@ -158,6 +172,9 @@
 </script>
 <script>
 <?!= include('_management'); ?>
+</script>
+<script>
+<?!= include('_phase2_ui_fix'); ?>
 </script>
 
 </body>
