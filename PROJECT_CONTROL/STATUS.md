@@ -29,8 +29,8 @@ Google Apps Script HTML Service + Google Apps Script backend + Google Sheets.
 - Schedule registration writes to Google Sheets: PASS.
 - Google Cloud project `MAGASIN NOIBO` configured and linked for Apps Script API access.
 - `testDongBoGitHub()`: PASS.
-- `previewDongBoGitHub()`: PASS; canonical source count reported as 27 files.
-- `dongBoGitHubSangAppsScript()`: PASS; 27 canonical files synchronized into Apps Script and an Apps Script backup version was created before update.
+- `previewDongBoGitHub()`: PASS; canonical source count reported as 27 runtime files.
+- Previous merge-style sync: PASS at API level, but exposed legacy duplicate globals in Apps Script. This path is now retired.
 
 ## PHASE 2 — AUTH / SESSION / ROLE
 ### Code changes completed in GitHub
@@ -45,17 +45,30 @@ Google Apps Script HTML Service + Google Apps Script backend + Google Sheets.
 - Logout and reload/page-restoration after the latest UI fix: PENDING final smoke test.
 - Manager/owner role visibility and live role/status-change test: PENDING final smoke test.
 
-## SOURCE SYNCHRONIZATION — COMPLETED
+## SOURCE SYNCHRONIZATION — CLEAN V2
 ### Canonical sync module
 `backend/20_Đồng_bộ_GitHub.gs`
 
+### Canonical Apps Script manifest
+`PROJECT_CONTROL/appsscript.json`
+
 ### Current workflow
 1. `testDongBoGitHub()` — verifies Apps Script API access.
-2. `previewDongBoGitHub()` — reads canonical GitHub source without changing Apps Script.
-3. `dongBoGitHubSangAppsScript()` — creates a backup version, merges canonical GitHub files into Apps Script, preserves non-canonical Apps Script files, and does not auto-deploy.
+2. `previewDongBoGitHub()` — builds and validates the exact canonical target without changing Apps Script.
+3. `previewDongBoGitHubSyncPlan()` — compares current Apps Script files against the exact GitHub target and lists additions/replacements/removals.
+4. `dongBoGitHubSangAppsScript()` — creates a backup Version, then replaces Apps Script HEAD with the exact canonical manifest + runtime file set.
+
+### Clean-sync rule
+The sync engine no longer merges or preserves unknown legacy Apps Script files. Every clean sync sends only the GitHub canonical manifest plus the 27 canonical backend/frontend files. This removes legacy duplicate files that can cause global `const`/`let` redeclaration errors.
+
+### Apps Script API naming rule
+The sync engine converts GitHub filenames to Apps Script API file names correctly:
+- `.gs` → `SERVER_JS` name without `.gs`
+- `.html` → `HTML` name without `.html`
+- `PROJECT_CONTROL/appsscript.json` → `JSON` file named `appsscript`
 
 ### Important operating rule
-For canonical backend/frontend files, manual copy-paste is no longer required after GitHub changes. Run the sync function to update Apps Script from `main`. Deployment remains a separate controlled step until the production smoke-test suite is fully validated.
+Manual copy-paste is no longer required for canonical backend/frontend files after GitHub changes. Run the sync function to update Apps Script from `main`. Deployment remains a separate controlled step until the production smoke-test suite is fully validated.
 
 ## Next phase after Phase 2
 - Header + Drawer role-driven UI consolidation.
@@ -70,4 +83,4 @@ For canonical backend/frontend files, manual copy-paste is no longer required af
 - Reports: façade over attendance reporting.
 
 ## Working rule
-Use GitHub `main` as source of truth. Use feature branches for larger changes. Do not remove the current Apps Script fallback until the full production smoke-test suite passes.
+Use GitHub `main` as source of truth. Use feature branches for larger changes. Do not retire the current Apps Script deployment until the full production smoke-test suite passes.
