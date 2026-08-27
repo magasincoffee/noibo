@@ -111,7 +111,13 @@ function githubFrontendLoadFiles_() {
   return result;
 }
 
-function testGithubFrontendLoader_() {
+/*
+ * PUBLIC TEST WRAPPER
+ *
+ * Không đặt dấu '_' ở cuối để Apps Script hiển thị hàm này
+ * trong danh sách Run function của editor.
+ */
+function testGithubFrontendLoader() {
   const files = githubFrontendLoadFiles_();
   return {
     ok: true,
@@ -119,4 +125,9 @@ function testGithubFrontendLoader_() {
     files: Object.keys(files),
     baseUrl: MAGASIN_GITHUB_RAW_BASE_
   };
+}
+
+/* Giữ tên private cũ để tương thích với tài liệu/phiên bản trước. */
+function testGithubFrontendLoader_() {
+  return testGithubFrontendLoader();
 }
