@@ -3,11 +3,10 @@
    ARCH-02 / GitHub Frontend → Apps Script Backend
 
    Mục tiêu:
-   - Giữ nguyên các module nghiệp vụ 01 → 15.
-   - Thêm HTTP POST endpoint cho frontend chạy ngoài HTML Service.
-   - Chỉ expose action nằm trong allowlist.
-   - Login / đăng ký / xác thực là public action.
-   - Các action nghiệp vụ phải có sessionToken.
+   - Giữ nguyên các module nghiệp vụ hiện có.
+   - Thêm HTTP POST endpoint cho frontend chạy trên GitHub Pages.
+   - Chỉ expose các action đã được xác định rõ.
+   - Không dùng dynamic eval/function name từ request.
 
    Request body:
    {
@@ -16,7 +15,7 @@
      "payload": { ... }
    }
 
-   Client nên gửi POST text/plain với body JSON.stringify(...)
+   Client dùng POST text/plain với JSON.stringify(...)
    để tránh CORS preflight OPTIONS.
 ========================================================= */
 
@@ -45,14 +44,7 @@ const MAGASIN_API_SESSION_ACTIONS_ = [
   'getAttendanceHistory',
   'submitShiftSwap',
   'getMyShiftSwapRequests',
-  'getMyKpi',
-  'getScheduleManagement',
-  'getScheduleEmployeeOptions',
-  'approveSchedule',
-  'assignSchedule',
-  'getAttendanceManagementV33',
-  'managerUpdateAttendanceRecord',
-  'managerDeleteAttendanceRecord'
+  'getMyKpi'
 ];
 
 function doPost(e) {
@@ -67,13 +59,13 @@ function doPost(e) {
     if (action === 'health') {
       return magasinApiJson_(true, 'MAGASIN API đang hoạt động.', {
         service: 'magasin-noibo-api',
-        version: '1.0.1',
+        version: '1.1',
         time: new Date().toISOString()
       });
     }
 
     if (MAGASIN_API_PUBLIC_ACTIONS_.indexOf(action) !== -1) {
-      return magasinApiExecute_(action, request.payload, '');
+      return magasinApiExecutePublic_(action, request.payload);
     }
 
     if (MAGASIN_API_SESSION_ACTIONS_.indexOf(action) === -1) {
@@ -94,7 +86,7 @@ function doPost(e) {
       return magasinApiJson_(false, 'Phiên đăng nhập không tồn tại hoặc đã hết hạn.');
     }
 
-    return magasinApiExecute_(action, request.payload, sessionToken);
+    return magasinApiExecuteSession_(action, request.payload, sessionToken);
 
   } catch (err) {
     console.error(err);
@@ -142,16 +134,89 @@ function magasinApiParseRequest_(e) {
   };
 }
 
-function magasinApiExecute_(action, payload, sessionToken) {
-  const fn = globalThis[action];
+function magasinApiExecutePublic_(action, payload) {
+  const p = payload || {};
 
-  if (typeof fn !== 'function') {
-    return magasinApiJson_(false, 'Backend chưa có hàm: ' + action);
+  switch (action) {
+    case 'login':
+      return magasinApiWrapResult_(login(p));
+    case 'registerUser':
+      return magasinApiWrapResult_(registerUser(p));
+    case 'verifyEmail':
+      return magasinApiWrapResult_(verifyEmail(p));
+    case 'requestPasswordReset':
+      return magasinApiWrapResult_(requestPasswordReset(p));
+    case 'resetPassword':
+      return magasinApiWrapResult_(resetPassword(p));
+    default:
+      return magasinApiJson_(false, 'Public action không được triển khai.');
   }
+}
 
-  const args = magasinApiBuildArgs_(action, payload || {}, sessionToken);
-  const result = fn.apply(null, args);
+function magasinApiExecuteSession_(action, payload, token) {
+  const p = payload || {};
 
+  switch (action) {
+    case 'getSession':
+      return magasinApiWrapResult_(getSession(token));
+
+    case 'logout':
+      return magasinApiWrapResult_(logout(token));
+
+    case 'getMyAccess':
+      return magasinApiWrapResult_(getMyAccess(token));
+
+    case 'getCurrentEmployeeProfile':
+      return magasinApiWrapResult_(getCurrentEmployeeProfile(token));
+
+    case 'updateCurrentEmployeeProfile': {
+      const form = Object.assign({}, p, {token: token});
+      return magasinApiWrapResult_(updateCurrentEmployeeProfile(form));
+    }
+
+    case 'changeCurrentEmployeePassword': {
+      const form = Object.assign({}, p, {token: token});
+      return magasinApiWrapResult_(changeCurrentEmployeePassword(form));
+    }
+
+    case 'getMySchedule':
+      return magasinApiWrapResult_(getMySchedule(token));
+
+    case 'registerShift':
+      return magasinApiWrapResult_(registerShift(token, p));
+
+    case 'cancelShift':
+      return magasinApiWrapResult_(
+        cancelShift(token, p.id || p.scheduleId || p.value || p)
+      );
+
+    case 'getAttendanceOptions':
+      return magasinApiWrapResult_(getAttendanceOptions(token));
+
+    case 'createAttendanceRecord':
+      return magasinApiWrapResult_(createAttendanceRecord(token, p));
+
+    case 'updateAttendanceRecord':
+      return magasinApiWrapResult_(updateAttendanceRecord(token, p));
+
+    case 'getAttendanceHistory':
+      return magasinApiWrapResult_(getAttendanceHistory(token, p));
+
+    case 'submitShiftSwap':
+      return magasinApiWrapResult_(submitShiftSwap(token, p));
+
+    case 'getMyShiftSwapRequests':
+      return magasinApiWrapResult_(getMyShiftSwapRequests(token));
+
+    case 'getMyKpi':
+      return magasinApiWrapResult_(getMyKpi(token));
+
+    default:
+      return magasinApiJson_(false, 'Session action không được triển khai.');
+  }
+}
+
+function magasinApiWrapResult_(result) {
   if (result === undefined) {
     return magasinApiJson_(true, '', null);
   }
@@ -161,63 +226,6 @@ function magasinApiExecute_(action, payload, sessionToken) {
     result && result.message ? String(result.message) : '',
     result
   );
-}
-
-function magasinApiBuildArgs_(action, payload, sessionToken) {
-  const p = payload || {};
-
-  switch (action) {
-    /* ---------- PUBLIC ---------- */
-    case 'login':
-    case 'registerUser':
-    case 'verifyEmail':
-    case 'requestPasswordReset':
-    case 'resetPassword':
-      return [p];
-
-    /* ---------- SESSION ONLY ---------- */
-    case 'getSession':
-    case 'logout':
-    case 'getMyAccess':
-    case 'getCurrentEmployeeProfile':
-    case 'getMySchedule':
-    case 'getAttendanceOptions':
-    case 'getMyShiftSwapRequests':
-    case 'getMyKpi':
-      return [sessionToken];
-
-    /* ---------- SESSION + FORM ---------- */
-    case 'updateCurrentEmployeeProfile':
-    case 'changeCurrentEmployeePassword': {
-      const form = Object.assign({}, p);
-      form.token = sessionToken;
-      return [form];
-    }
-
-    case 'getAttendanceHistory':
-    case 'getAttendanceManagementV33':
-    case 'getScheduleEmployeeOptions':
-      return [sessionToken, p];
-
-    case 'registerShift':
-    case 'createAttendanceRecord':
-    case 'updateAttendanceRecord':
-    case 'submitShiftSwap':
-    case 'approveSchedule':
-    case 'assignSchedule':
-    case 'managerUpdateAttendanceRecord':
-    case 'managerDeleteAttendanceRecord':
-      return [sessionToken, p];
-
-    case 'getScheduleManagement':
-      return [sessionToken, p];
-
-    case 'cancelShift':
-      return [sessionToken, p.id || p.scheduleId || p];
-
-    default:
-      return [p];
-  }
 }
 
 function magasinApiJson_(ok, message, data) {
