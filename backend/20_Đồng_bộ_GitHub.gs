@@ -25,8 +25,9 @@ const MAGASIN_SYNC_CONFIG = {
     'backend/10_Chấm_công.gs','backend/11_Đổi_ca.gs','backend/12_KPI.gs','backend/13_Kho_hàng.gs',
     'backend/14_Báo_cáo.gs','backend/15_Ứng_dụng_web.gs','backend/16_API_Bridge.gs','backend/17_GitHub_Bridge.gs',
     'backend/18_GitHub_Frontend_Loader.gs','backend/19_Phase2_Auth_Session_Role_Test.gs','backend/20_Đồng_bộ_GitHub.gs',
+    'bridge/Bridge.html',
     'frontend/Index.html','frontend/_styles.html','frontend/_auth.html','frontend/_schedule.html',
-    'frontend/_attendance.html','frontend/_management.html','frontend/_phase2_ui_fix.html','frontend/Bridge.html'
+    'frontend/_attendance.html','frontend/_management.html','frontend/_phase2_ui_fix.html'
   ]
 };
 
@@ -63,7 +64,7 @@ function dongBoGitHubSangAppsScript(){
   const targetMap=mapFilesByName_(target.files),currentMap=mapFilesByName_(current.files||[]);
   if(!targetMap.appsscript||targetMap.appsscript.type!=='JSON')throw new Error('GitHub canonical thiếu appsscript.json hợp lệ.');
   if(!targetMap.Index||targetMap.Index.type!=='HTML')throw new Error('GitHub canonical thiếu frontend/Index.html hợp lệ.');
-  if(!targetMap.Bridge||targetMap.Bridge.type!=='HTML')throw new Error('GitHub canonical thiếu frontend/Bridge.html.');
+  if(!targetMap.Bridge||targetMap.Bridge.type!=='HTML')throw new Error('GitHub canonical thiếu bridge/Bridge.html.');
   const backup=createAppsScriptVersion_(scriptId,'MAGASIN backup before CLEAN GitHub sync '+new Date().toISOString());
   const updated=updateAppsScriptProjectContent_(scriptId,target);
   const removed=Object.keys(currentMap).filter(name=>!targetMap[name]);
