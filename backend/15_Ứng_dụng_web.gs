@@ -3,8 +3,16 @@
    ARCH-01 / Mobile Final
 ========================================================= */
 
-function doGet() {
+function doGet(e) {
   ensureOperationalSheets_();
+
+  /* ARCH-03: endpoint HTML Service dùng làm bridge cho GitHub Pages. */
+  if (e && e.parameter && String(e.parameter.bridge || '') === '1') {
+    return HtmlService
+      .createHtmlOutputFromFile('Bridge')
+      .setTitle('MAGASIN API Bridge')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
 
   return HtmlService
     .createTemplateFromFile('Index')
