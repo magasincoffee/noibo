@@ -3,4 +3,4 @@
 
    Không đặt mật khẩu, API key hoặc secret vào file này.
 */
-window.MAGASIN_API_URL = 'https://script.google.com/macros/s/AKfycbyhvtvQLc1ZBIfHbnnFQOZM-U96fjR304aIcdLXElK2OvdF6MqE8-vUBcE2XngccMEy/exec';
+window.MAGASIN_API_URL = 'https://script.google.com/macros/s/AKfycbyMyeiVpVVk4AFUlXU6Xi0FLmKg3ta1IctYxeBs8k2vyH-EhKTiN-RYYxUvHZTuuqeR/exec';
