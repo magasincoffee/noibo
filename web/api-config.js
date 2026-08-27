@@ -1,8 +1,6 @@
 /* MAGASIN API CONFIG
-   Dán URL Web App Apps Script tại đây sau khi deploy API Bridge.
-   Ví dụ:
-   window.MAGASIN_API_URL = 'https://script.google.com/macros/s/XXXX/exec';
+   GitHub Frontend → Google Apps Script Web App
 
    Không đặt mật khẩu, API key hoặc secret vào file này.
 */
-window.MAGASIN_API_URL = '';
+window.MAGASIN_API_URL = 'https://script.google.com/macros/s/AKfycbyhvtvQLc1ZBIfHbnnFQOZM-U96fjR304aIcdLXElK2OvdF6MqE8-vUBcE2XngccMEy/exec';
