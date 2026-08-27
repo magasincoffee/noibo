@@ -20,8 +20,8 @@ GitHub repository `magasincoffee/noibo` → branch `main` is the canonical sourc
 01–15 are the main Google Apps Script modules. Module names are preserved from the current project architecture.
 
 Additional runtime/control modules:
-- `16_API_Bridge.gs` — legacy experimental HTTP API bridge; not production transport
-- `17_GitHub_Bridge.gs` — legacy experimental iframe bridge; not production transport
+- `16_API_Bridge.gs` — legacy experimental HTTP API bridge; retained in canonical source for now
+- `17_GitHub_Bridge.gs` — legacy experimental iframe bridge; retained in canonical source for now
 - `18_GitHub_Frontend_Loader.gs` — current GitHub frontend loader
 - `19_Phase2_Auth_Session_Role_Test.gs` — Phase 2 non-destructive verification helper
 - `20_Đồng_bộ_GitHub.gs` — controlled GitHub → Apps Script project synchronization
@@ -64,13 +64,15 @@ Phase 2 hardening rule:
 - Attendance reads approved schedule information for planned shifts
 
 ## GitHub → Apps Script synchronization
+- Canonical Apps Script manifest: `PROJECT_CONTROL/appsscript.json`
 - `20_Đồng_bộ_GitHub.gs` reads canonical `backend/` and `frontend/` files from GitHub `main`.
 - Sync first reads the current Apps Script project and creates a Version API backup.
-- Sync merges/replaces only the allowlisted canonical files and preserves other existing Apps Script files.
+- **CLEAN SYNC:** `projects.updateContent` receives only the canonical manifest + canonical runtime files. Files not in the canonical set are removed from Apps Script HEAD instead of being preserved.
+- Apps Script API file names are normalized correctly: `.gs` / `.html` extensions are removed from the API `name`; manifest is sent as `appsscript` with type `JSON`.
 - Sync does **not** automatically deploy a new production version.
 - Required one-time setup: enable Apps Script API and add OAuth scope `https://www.googleapis.com/auth/script.projects`.
-- Daily safe flow: `testDongBoGitHub()` → `previewDongBoGitHub()` → `dongBoGitHubSangAppsScript()` → smoke test → deploy.
-- `projects.updateContent` replaces the project's HEAD content, so the sync engine intentionally preserves all existing non-canonical files before update.
+- Safe flow: `testDongBoGitHub()` → `previewDongBoGitHub()` / `previewDongBoGitHubSyncPlan()` → `dongBoGitHubSangAppsScript()` → smoke test → deploy.
+- Apps Script `appsscript.json` must be kept by the runtime; it is reconstructed from GitHub during CLEAN SYNC.
 
 ## Source-of-truth rule
 Use the canonical files in `backend/` and `frontend/` rather than version-suffixed exported copies.
