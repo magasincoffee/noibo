@@ -21,11 +21,14 @@
   </div>
   <div id="status" class="status">Chưa kiểm tra.</div>
 </main>
+<script src="./api-config.js"></script>
 <script src="./api.js"></script>
 <script>
   const urlEl=document.getElementById('apiUrl');
   const statusEl=document.getElementById('status');
   const button=document.getElementById('testBtn');
+
+  urlEl.value=String(window.MAGASIN_API_URL||'');
 
   button.addEventListener('click',async function(){
     const url=String(urlEl.value||'').trim();
