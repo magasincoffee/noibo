@@ -12,25 +12,31 @@
     <?!= include('_styles'); ?>
   </style>
   <style>
-    /* PHASE 2: không cho Login first-paint khi đã có session token ở
-       sessionStorage hoặc token legacy còn nằm trong localStorage. */
+    /* PHASE 2: không cho Login first-paint khi tab đã có dấu hiệu phiên trước đó.
+       Token có thể nằm ở sessionStorage/localStorage legacy; page-state cũng là
+       tín hiệu bền vững để chặn flash trong môi trường Apps Script iframe. */
     html.magasin-session-pending .card{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important}
     html.magasin-app-booting .card{visibility:hidden!important;opacity:0!important;pointer-events:none!important}
     html.magasin-app-booting #app{visibility:hidden!important;opacity:0!important;pointer-events:none!important}
   </style>
   <script>
-    /* Chạy trước khi body render.
-       Kiểm tra cả sessionStorage và localStorage legacy để chặn Login flash
-       trong trường hợp trình duyệt/iframe không khôi phục sessionStorage. */
+    /* Chạy trước khi body render. Không dùng dữ liệu nhạy cảm ngoài token đã có.
+       Nếu còn page-state sau một phiên đăng nhập trước, coi đây là boot pending;
+       backend sẽ xác nhận session rồi quyết định App hay Login. */
     (function(){
       try{
-        var key='magasin_session_token';
-        var hasToken=false;
-        try{hasToken=!!window.sessionStorage.getItem(key);}catch(err){}
-        if(!hasToken){
-          try{hasToken=!!window.localStorage.getItem(key);}catch(err){}
+        var tokenKey='magasin_session_token';
+        var pageKey='magasin_current_page';
+        var stateKey='magasin_page_state';
+        var hasSessionHint=false;
+        try{hasSessionHint=!!window.sessionStorage.getItem(tokenKey);}catch(err){}
+        if(!hasSessionHint){
+          try{hasSessionHint=!!window.localStorage.getItem(tokenKey);}catch(err){}
         }
-        if(hasToken){
+        if(!hasSessionHint){
+          try{hasSessionHint=!!window.localStorage.getItem(pageKey) || !!window.localStorage.getItem(stateKey);}catch(err){}
+        }
+        if(hasSessionHint){
           document.documentElement.classList.add('magasin-session-pending');
           document.documentElement.classList.add('magasin-app-booting');
         }
