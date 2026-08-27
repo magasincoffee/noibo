@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## 2026-08-27 — CLEAN GITHUB → APPS SCRIPT SYNC V2
+- Replaced the previous merge-style synchronization model with an exact canonical project replacement model.
+- Added `PROJECT_CONTROL/appsscript.json` as the canonical Apps Script manifest.
+- Updated `backend/20_Đồng_bộ_GitHub.gs` to normalize Apps Script API file names correctly and rebuild the target project from GitHub `main` only.
+- Added `previewDongBoGitHubSyncPlan()` to show additions, replacements and removals before a clean sync.
+- Clean sync creates an Apps Script Version backup before `projects.updateContent`.
+- Clean sync removes legacy/non-canonical Apps Script files instead of preserving them, preventing duplicate global declarations such as `USER_HEADERS`.
+- Deployment remains a separate controlled step.
+
 ## 2026-08-27 — PHASE 2 AUTH / SESSION / ROLE
 - Re-read the canonical project from `magasincoffee/noibo` → `main`.
 - Confirmed GitHub-loaded Apps Script runtime and user-validated schedule write path.
