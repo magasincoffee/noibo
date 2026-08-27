@@ -4,18 +4,20 @@
 
    Mục tiêu:
    - Giữ nguyên các module nghiệp vụ 01 → 15.
-   - Thêm HTTP endpoint cho frontend chạy ngoài HTML Service.
-   - Chỉ cho phép action nằm trong allowlist.
-   - Login không cần session; các action còn lại phải mang sessionToken.
+   - Thêm HTTP POST endpoint cho frontend chạy ngoài HTML Service.
+   - Chỉ expose action nằm trong allowlist.
+   - Login / đăng ký / xác thực là public action.
+   - Các action nghiệp vụ phải có sessionToken.
 
-   Gọi từ GitHub Frontend:
-   POST application/x-www-form-urlencoded hoặc text/plain
-   body = JSON.stringify({ action: 'login', payload: {...} })
+   Request body:
+   {
+     "action": "login",
+     "sessionToken": "...",
+     "payload": { ... }
+   }
 
-   LƯU Ý CORS:
-   - Apps Script Web Apps chỉ có doGet/doPost.
-   - Client bridge dùng POST body text/plain để tránh preflight OPTIONS.
-   - Không thêm custom request headers từ trình duyệt.
+   Client nên gửi POST text/plain với body JSON.stringify(...)
+   để tránh CORS preflight OPTIONS.
 ========================================================= */
 
 const MAGASIN_API_PUBLIC_ACTIONS_ = [
@@ -23,7 +25,7 @@ const MAGASIN_API_PUBLIC_ACTIONS_ = [
   'login',
   'registerUser',
   'verifyEmail',
-  'forgotPassword',
+  'requestPasswordReset',
   'resetPassword'
 ];
 
@@ -31,8 +33,9 @@ const MAGASIN_API_SESSION_ACTIONS_ = [
   'getSession',
   'logout',
   'getMyAccess',
-  'getMyProfile',
-  'updateMyProfile',
+  'getCurrentEmployeeProfile',
+  'updateCurrentEmployeeProfile',
+  'changeCurrentEmployeePassword',
   'getMySchedule',
   'registerShift',
   'cancelShift',
@@ -43,7 +46,8 @@ const MAGASIN_API_SESSION_ACTIONS_ = [
   'submitShiftSwap',
   'getMyShiftSwapRequests',
   'getMyKpi',
-  'getManagementScheduleV33',
+  'getScheduleManagement',
+  'getScheduleEmployeeOptions',
   'approveSchedule',
   'assignSchedule',
   'getAttendanceManagementV33',
@@ -54,24 +58,25 @@ const MAGASIN_API_SESSION_ACTIONS_ = [
 function doPost(e) {
   try {
     const request = magasinApiParseRequest_(e);
+    const action = request.action;
 
-    if (!request.action) {
+    if (!action) {
       return magasinApiJson_(false, 'Thiếu action.');
     }
 
-    if (request.action === 'health') {
+    if (action === 'health') {
       return magasinApiJson_(true, 'MAGASIN API đang hoạt động.', {
         service: 'magasin-noibo-api',
-        version: '1.0',
+        version: '1.0.1',
         time: new Date().toISOString()
       });
     }
 
-    if (MAGASIN_API_PUBLIC_ACTIONS_.indexOf(request.action) !== -1) {
-      return magasinApiExecute_(request.action, request.payload);
+    if (MAGASIN_API_PUBLIC_ACTIONS_.indexOf(action) !== -1) {
+      return magasinApiExecute_(action, request.payload, '');
     }
 
-    if (MAGASIN_API_SESSION_ACTIONS_.indexOf(request.action) === -1) {
+    if (MAGASIN_API_SESSION_ACTIONS_.indexOf(action) === -1) {
       return magasinApiJson_(false, 'Action không được phép.');
     }
 
@@ -89,11 +94,7 @@ function doPost(e) {
       return magasinApiJson_(false, 'Phiên đăng nhập không tồn tại hoặc đã hết hạn.');
     }
 
-    return magasinApiExecute_(
-      request.action,
-      request.payload,
-      sessionToken
-    );
+    return magasinApiExecute_(action, request.payload, sessionToken);
 
   } catch (err) {
     console.error(err);
@@ -113,10 +114,11 @@ function magasinApiParseRequest_(e) {
   }
 
   if (!raw) {
-    return { action: '', payload: {}, sessionToken: '' };
+    return {action:'', sessionToken:'', payload:{}};
   }
 
   let parsed;
+
   try {
     parsed = JSON.parse(raw);
   } catch (err) {
@@ -133,21 +135,21 @@ function magasinApiParseRequest_(e) {
 
   return {
     action: String(parsed.action || '').trim(),
-    payload: (parsed.payload && typeof parsed.payload === 'object')
+    sessionToken: String(parsed.sessionToken || '').trim(),
+    payload: parsed.payload && typeof parsed.payload === 'object'
       ? parsed.payload
-      : {},
-    sessionToken: String(parsed.sessionToken || '').trim()
+      : {}
   };
 }
 
 function magasinApiExecute_(action, payload, sessionToken) {
-  const args = magasinApiBuildArgs_(action, payload, sessionToken);
   const fn = globalThis[action];
 
   if (typeof fn !== 'function') {
     return magasinApiJson_(false, 'Backend chưa có hàm: ' + action);
   }
 
+  const args = magasinApiBuildArgs_(action, payload || {}, sessionToken);
   const result = fn.apply(null, args);
 
   if (result === undefined) {
@@ -155,7 +157,7 @@ function magasinApiExecute_(action, payload, sessionToken) {
   }
 
   return magasinApiJson_(
-    result && result.ok !== false,
+    !(result && result.ok === false),
     result && result.message ? String(result.message) : '',
     result
   );
@@ -165,29 +167,39 @@ function magasinApiBuildArgs_(action, payload, sessionToken) {
   const p = payload || {};
 
   switch (action) {
+    /* ---------- PUBLIC ---------- */
     case 'login':
     case 'registerUser':
     case 'verifyEmail':
-    case 'forgotPassword':
+    case 'requestPasswordReset':
     case 'resetPassword':
       return [p];
 
+    /* ---------- SESSION ONLY ---------- */
     case 'getSession':
     case 'logout':
     case 'getMyAccess':
-    case 'getMyProfile':
-    case 'updateMyProfile':
+    case 'getCurrentEmployeeProfile':
     case 'getMySchedule':
     case 'getAttendanceOptions':
-    case 'getAttendanceHistory':
     case 'getMyShiftSwapRequests':
     case 'getMyKpi':
-    case 'getManagementScheduleV33':
+      return [sessionToken];
+
+    /* ---------- SESSION + FORM ---------- */
+    case 'updateCurrentEmployeeProfile':
+    case 'changeCurrentEmployeePassword': {
+      const form = Object.assign({}, p);
+      form.token = sessionToken;
+      return [form];
+    }
+
+    case 'getAttendanceHistory':
     case 'getAttendanceManagementV33':
+    case 'getScheduleEmployeeOptions':
       return [sessionToken, p];
 
     case 'registerShift':
-    case 'cancelShift':
     case 'createAttendanceRecord':
     case 'updateAttendanceRecord':
     case 'submitShiftSwap':
@@ -196,6 +208,12 @@ function magasinApiBuildArgs_(action, payload, sessionToken) {
     case 'managerUpdateAttendanceRecord':
     case 'managerDeleteAttendanceRecord':
       return [sessionToken, p];
+
+    case 'getScheduleManagement':
+      return [sessionToken, p];
+
+    case 'cancelShift':
+      return [sessionToken, p.id || p.scheduleId || p];
 
     default:
       return [p];
