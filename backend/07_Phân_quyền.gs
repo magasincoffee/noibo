@@ -1,14 +1,11 @@
 /* =========================================================
-   MAGASIN — PHÂN QUYỀN VÀ PHẠM VI TRUY CẬP
-   File được tách từ Code.gs hiện tại.
-   Chỉ tách module, không thay đổi logic chức năng.
-   Chứa chuẩn hóa vai trò, quyền và phạm vi truy cập.
+   MAGASIN — PHÂN QUYỀN VÀ PHẠM VI TRUY CẬP V2
 
-   LƯU Ý:
-   - Tên FILE dùng tiếng Việt 100% để dễ kiểm soát.
-   - Tên HÀM hiện tại được giữ nguyên để không làm hỏng các lời gọi
-     từ Index.html và giữa các module.
-   - Tất cả file .gs trong cùng Apps Script Project dùng chung phạm vi.
+   PHASE 2 — AUTH + SESSION + ROLE
+   - Chuẩn hóa quyền trang theo 4 vai trò.
+   - Bổ sung capability keys để frontend có thể dùng cùng một nguồn
+     quyền với backend.
+   - Giữ nguyên các hàm hiện tại để không phá lời gọi cũ.
 ========================================================= */
 
 function normalizeRole_(role) {
@@ -84,38 +81,189 @@ function roleLabel_(role) {
   return 'Nhân viên';
 }
 
+/*
+ * Quyền theo PAGE.
+ * Đây là nguồn quyền trang canonical cho toàn bộ frontend/backend.
+ *
+ * STAFF:
+ * - dashboard: Tổng quan
+ * - inventory: khu vực Tồn hàng / tác vụ cơ bản
+ * - account: thông tin cá nhân
+ *
+ * STORE_MANAGER:
+ * - dashboard, inventory, attendance, orders, reports, account
+ *
+ * INVENTORY_MANAGER:
+ * - dashboard, inventory, reports, account
+ *
+ * OWNER:
+ * - dashboard, inventory, attendance, orders, reports, settings, account
+ */
 function getRolePermissions_(role) {
   const normalized = normalizeRole_(role);
 
-  // Chủ cửa hàng: toàn bộ hệ thống.
   if (normalized === 'OWNER') {
-    return ['dashboard','inventory','orders','reports','settings'];
+    return [
+      'dashboard',
+      'inventory',
+      'attendance',
+      'orders',
+      'reports',
+      'settings',
+      'account'
+    ];
   }
 
-  // Quản lý kho: tập trung nghiệp vụ kho và báo cáo liên quan.
-  if (normalized === 'INVENTORY_MANAGER') {
-    return ['dashboard','inventory','reports'];
-  }
-
-  // Quản lý cửa hàng: vận hành cửa hàng, đơn hàng, kho và báo cáo.
   if (normalized === 'STORE_MANAGER') {
-    return ['dashboard','inventory','orders','reports'];
+    return [
+      'dashboard',
+      'inventory',
+      'attendance',
+      'orders',
+      'reports',
+      'account'
+    ];
   }
 
-  // Nhân viên: chỉ các tác vụ cơ bản.
-  // Chấm công, nhập tồn hàng hóa và kiểm kê dụng cụ
-  // được hiển thị trong khu vực Kho hàng.
-  return ['dashboard','inventory'];
+  if (normalized === 'INVENTORY_MANAGER') {
+    return [
+      'dashboard',
+      'inventory',
+      'reports',
+      'account'
+    ];
+  }
+
+  return [
+    'dashboard',
+    'inventory',
+    'account'
+  ];
+}
+
+/*
+ * Capability keys.
+ * Trang = nơi hiển thị.
+ * Capability = hành động được phép thực hiện.
+ *
+ * Backend nên dùng capability để kiểm soát nghiệp vụ khi module
+ * tương ứng được hoàn thiện. Frontend có thể dùng cùng response này
+ * để dựng Drawer/menu mà không phải tự đoán quyền.
+ */
+function getRoleCapabilities_(role) {
+  const normalized = normalizeRole_(role);
+
+  const STAFF = [
+    'dashboard.view',
+    'schedule.view',
+    'schedule.register',
+    'attendance.self',
+    'shift_swap.self',
+    'inventory.self',
+    'account.view',
+    'account.update'
+  ];
+
+  const INVENTORY_MANAGER = [
+    'dashboard.view',
+    'inventory.view',
+    'inventory.manage',
+    'reports.view',
+    'account.view',
+    'account.update'
+  ];
+
+  const STORE_MANAGER = [
+    'dashboard.view',
+    'schedule.view',
+    'schedule.manage',
+    'schedule.approve',
+    'attendance.view',
+    'attendance.manage',
+    'inventory.view',
+    'inventory.manage',
+    'orders.view',
+    'orders.manage',
+    'reports.view',
+    'account.view',
+    'account.update'
+  ];
+
+  const OWNER = [
+    'dashboard.view',
+    'schedule.view',
+    'schedule.manage',
+    'schedule.approve',
+    'attendance.view',
+    'attendance.manage',
+    'inventory.view',
+    'inventory.manage',
+    'orders.view',
+    'orders.manage',
+    'reports.view',
+    'users.manage',
+    'settings.manage',
+    'account.view',
+    'account.update'
+  ];
+
+  if (normalized === 'OWNER') return OWNER;
+  if (normalized === 'STORE_MANAGER') return STORE_MANAGER;
+  if (normalized === 'INVENTORY_MANAGER') return INVENTORY_MANAGER;
+  return STAFF;
+}
+
+function hasRoleCapability_(role, capability) {
+  const target = clean_(capability);
+  if (!target) return false;
+  return getRoleCapabilities_(role).indexOf(target) !== -1;
+}
+
+function requireCapability_(token, capability, store) {
+  const user = requireSessionUser_(token);
+
+  if (!user) {
+    return {
+      ok:false,
+      message:'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'
+    };
+  }
+
+  if (!hasRoleCapability_(user.role, capability)) {
+    return {
+      ok:false,
+      message:'Tài khoản không có quyền thực hiện thao tác này.'
+    };
+  }
+
+  if (store && normalizeRole_(user.role) !== 'OWNER') {
+    if (!scopeAllows_(user.accessScope, store)) {
+      const scopeText = String(user.accessScope || '').trim();
+      return {
+        ok:false,
+        message: scopeText
+          ? 'Bạn không có quyền thao tác tại cửa hàng ' +
+            String(store) + '. Phạm vi hiện tại: ' + scopeText + '.'
+          : 'Tài khoản chưa được cấu hình Phạm vi truy cập.'
+      };
+    }
+  }
+
+  return {ok:true, user:user};
 }
 
 function getMyAccess(token) {
   const user = requireSessionUser_(token);
   if (!user) return fail_('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+
+  const role = normalizeRole_(user.role);
+
   return {
     ok:true,
-    role:normalizeRole_(user.role),
-    roleLabel:roleLabel_(user.role),
+    role:role,
+    roleLabel:roleLabel_(role),
     accessScope:user.accessScope || '',
-    pages:getRolePermissions_(user.role)
+    pages:getRolePermissions_(role),
+    capabilities:getRoleCapabilities_(role)
   };
 }
