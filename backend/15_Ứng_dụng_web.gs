@@ -1,17 +1,34 @@
 /* =========================================================
    MAGASIN — ỨNG DỤNG WEB
-   ARCH-01 / Mobile Final
+   ARCH-05 / GitHub Frontend Runtime
 ========================================================= */
 
 function doGet(e) {
   ensureOperationalSheets_();
 
-  /* ARCH-03: endpoint HTML Service dùng làm bridge cho GitHub Pages. */
-  if (e && e.parameter && String(e.parameter.bridge || '') === '1') {
+  const params = (e && e.parameter) ? e.parameter : {};
+
+  /*
+   * ARCH-03: Bridge cũ được giữ lại để tương thích tạm thời.
+   * Runtime chính mới không còn phụ thuộc bridge này.
+   */
+  if (String(params.bridge || '') === '1') {
     return HtmlService
       .createHtmlOutputFromFile('Bridge')
       .setTitle('MAGASIN API Bridge')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
+
+  /*
+   * ARCH-05:
+   * Khi source=github, Apps Script tải frontend canonical từ GitHub main
+   * và ghép các partial trước khi render.
+   *
+   * Không đổi mặc định ngay để WebApp production hiện tại tiếp tục chạy
+   * ổn định trong giai đoạn chuyển đổi.
+   */
+  if (String(params.source || '').toLowerCase() === 'github') {
+    return renderGithubFrontend_();
   }
 
   return HtmlService
@@ -25,18 +42,9 @@ function doGet(e) {
 }
 
 /**
- * Nạp HTML partial.
- *
- * FIX: chuẩn hóa partial trước khi trả về.
- *
- * Index.html hiện bọc các partial JS bằng <script>...</script>
- * và partial CSS bằng <style>...</style>. Các phiên bản cũ của
- * _auth/_schedule/_attendance/_management có thể vẫn còn wrapper
- * <script>, còn _styles có thể còn wrapper <style>. Nếu include()
- * trả nguyên wrapper cũ sẽ tạo nested <script>/<style> và phần code
- * phía sau bị trình duyệt hiển thị thành TEXT.
- *
- * Hàm này loại wrapper cũ để mọi phiên bản partial đều tương thích.
+ * Nạp HTML partial từ Apps Script project hiện tại.
+ * Giữ lại để WebApp production cũ hoạt động song song trong thời gian
+ * chuyển frontend sang GitHub.
  */
 function include(filename) {
   const name = String(filename || '').trim();
@@ -58,21 +66,14 @@ function include(filename) {
 
   try {
     /*
-     * ARCH-01 / FIX-V7:
-     * Các partial frontend của MAGASIN là RAW source:
+     * Các partial frontend là RAW source:
      * - _styles     = CSS thuần
      * - _auth       = JavaScript thuần
      * - _schedule   = JavaScript thuần
      * - _attendance = JavaScript thuần
      * - _management = JavaScript thuần
      *
-     * Index.html tự bọc partial bằng <style> hoặc <script>.
-     * Vì vậy không dùng createHtmlOutputFromFile().getContent()
-     * để parse partial như một tài liệu HTML trung gian.
-     * Cách đó có thể làm hỏng source JS có các chuỗi HTML như
-     * '<div>...</div>' và gây lỗi "Nội dung HTML không đúng định dạng".
-     *
-     * getRawContent() trả về nguyên văn source của file partial.
+     * Index.html tự bọc partial bằng <style>/<script>.
      */
     return HtmlService
       .createTemplateFromFile(name)
