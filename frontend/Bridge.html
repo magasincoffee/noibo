@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="vi">
+<head><meta charset="utf-8"><title>MAGASIN Bridge</title></head>
+<body>
+<script>
+(function(){
+  'use strict';
+
+  const REQUEST_TYPE='MAGASIN_BRIDGE_REQUEST';
+  const RESPONSE_TYPE='MAGASIN_BRIDGE_RESPONSE';
+  const READY_TYPE='MAGASIN_BRIDGE_READY';
+
+  function allowedAction_(action){
+    const publicActions=[
+      'health','login','registerUser','verifyEmail',
+      'requestPasswordReset','resetPassword'
+    ];
+    const sessionActions=[
+      'getSession','logout','getMyAccess','getCurrentEmployeeProfile',
+      'updateCurrentEmployeeProfile','changeCurrentEmployeePassword',
+      'getMySchedule','registerShift','cancelShift',
+      'getAttendanceOptions','createAttendanceRecord','updateAttendanceRecord',
+      'getAttendanceHistory','submitShiftSwap','getMyShiftSwapRequests','getMyKpi'
+    ];
+    return publicActions.indexOf(action)!==-1 || sessionActions.indexOf(action)!==-1;
+  }
+
+  function send_(event,result){
+    event.source.postMessage({
+      type:RESPONSE_TYPE,
+      requestId:String(event.data.requestId||''),
+      result:result
+    },event.origin);
+  }
+
+  window.addEventListener('message',function(event){
+    const data=event.data||{};
+    if(data.type!==REQUEST_TYPE || !allowedAction_(String(data.action||''))) return;
+
+    const action=String(data.action||'');
+    const payload=data.payload && typeof data.payload==='object' ? data.payload : {};
+    const token=String(data.sessionToken||'');
+
+    google.script.run
+      .withSuccessHandler(function(result){ send_(event,result||{ok:true}); })
+      .withFailureHandler(function(error){
+        send_(event,{
+          ok:false,
+          message:String(error&&error.message||error||'Apps Script error')
+        });
+      })
+      .magasinBridgeCall(action,payload,token);
+  });
+
+  window.parent.postMessage({
+    type:READY_TYPE,
+    version:'1.0'
+  },'*');
+})();
+</script>
+</body>
+</html>
