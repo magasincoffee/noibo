@@ -24,6 +24,7 @@ Additional runtime/control modules:
 - `17_GitHub_Bridge.gs` — legacy experimental iframe bridge; not production transport
 - `18_GitHub_Frontend_Loader.gs` — current GitHub frontend loader
 - `19_Phase2_Auth_Session_Role_Test.gs` — Phase 2 non-destructive verification helper
+- `20_Đồng_bộ_GitHub.gs` — controlled GitHub → Apps Script project synchronization
 
 ## Frontend partials
 - `Index.html` — HTML shell, login views, app shell and common header container
@@ -32,6 +33,7 @@ Additional runtime/control modules:
 - `_schedule.html` — employee schedule UI
 - `_attendance.html` — attendance UI
 - `_management.html` — management UI
+- `_phase2_ui_fix.html` — Phase 2 session/reload/logout UI fix
 
 ## Current UI architecture
 - Shared topbar/header
@@ -61,10 +63,19 @@ Phase 2 hardening rule:
 - Manager approval and direct assignment are supported by the schedule backend
 - Attendance reads approved schedule information for planned shifts
 
+## GitHub → Apps Script synchronization
+- `20_Đồng_bộ_GitHub.gs` reads canonical `backend/` and `frontend/` files from GitHub `main`.
+- Sync first reads the current Apps Script project and creates a Version API backup.
+- Sync merges/replaces only the allowlisted canonical files and preserves other existing Apps Script files.
+- Sync does **not** automatically deploy a new production version.
+- Required one-time setup: enable Apps Script API and add OAuth scope `https://www.googleapis.com/auth/script.projects`.
+- Daily safe flow: `testDongBoGitHub()` → `previewDongBoGitHub()` → `dongBoGitHubSangAppsScript()` → smoke test → deploy.
+- `projects.updateContent` replaces the project's HEAD content, so the sync engine intentionally preserves all existing non-canonical files before update.
+
 ## Source-of-truth rule
 Use the canonical files in `backend/` and `frontend/` rather than version-suffixed exported copies.
 
 ## Current phase
-PHASE 2 — AUTH / SESSION / ROLE hardening
+PHASE 2 — AUTH / SESSION / ROLE hardening + GitHub source synchronization setup
 
-Source changes committed. Deployment smoke tests remain pending in the live Apps Script project.
+Live Apps Script deployment tests remain under user control.
