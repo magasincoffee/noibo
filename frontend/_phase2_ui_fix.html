@@ -1,5 +1,5 @@
 /* =========================================================
-   MAGASIN — PHASE 2 UI FIX V2
+   MAGASIN — PHASE 2 UI FIX V3
    Fix session rehydrate + logout + reload navigation.
 
    Mục tiêu:
@@ -9,10 +9,11 @@
    - Luôn có handler cho nút Đăng xuất trong sidebar.
    - Session hợp lệ -> vào thẳng app + restore navigation.
    - Session không hợp lệ -> Login sạch trạng thái.
+   - Không gỡ boot gate trước khi App + navigation đã render xong.
 
    LƯU Ý:
    File này chạy ở cuối Index.html. Boot gate được cài ngay khi
-   script được thực thi và dùng CSS injected để chặn first-paint flash.
+   script được thực thi và giữ kín UI cho tới khi rehydrate hoàn tất.
 ========================================================= */
 
 (function(){
@@ -36,7 +37,8 @@
         style.textContent=
           'html.magasin-app-booting .card{visibility:hidden!important;opacity:0!important;pointer-events:none!important;}' +
           'html.magasin-app-booting #app{visibility:hidden!important;opacity:0!important;pointer-events:none!important;}' +
-          'html.magasin-session-pending .card{visibility:hidden!important;opacity:0!important;pointer-events:none!important;}';
+          'html.magasin-session-pending .card{visibility:hidden!important;opacity:0!important;pointer-events:none!important;}' +
+          'html.magasin-session-pending #app{visibility:hidden!important;opacity:0!important;pointer-events:none!important;}';
         (document.head||document.documentElement).appendChild(style);
       }
     }catch(err){}
@@ -46,6 +48,20 @@
     try{
       document.documentElement.classList.remove('magasin-app-booting');
     }catch(err){}
+  }
+
+  function finishSessionRestore_(){
+    /*
+     * Không bỏ gate ngay sau openApp().
+     * Chờ 2 animation frames để DOM động của app/sidebar/page hoàn tất,
+     * sau đó mới cho browser hiển thị UI. Điều này loại bỏ Login flash.
+     */
+    requestAnimationFrame(function(){
+      requestAnimationFrame(function(){
+        document.documentElement.classList.remove('magasin-session-pending');
+        finishBoot_();
+      });
+    });
   }
 
   function hideLoginDuringSessionRestore_(){
@@ -103,6 +119,7 @@
 
     if(!(window.google&&google.script&&google.script.run)){
       if(restoreAttempts < MAX_RESTORE_ATTEMPTS){
+        restoreAttempts++;
         setTimeout(restoreSessionFixed_,350);
       }else{
         showLogin_();
@@ -124,6 +141,10 @@
           saveMagasinSessionToken_(token);
         }
 
+        /*
+         * Giữ boot gate trong suốt openApp + restore state.
+         * Người dùng chỉ nhìn thấy trang cuối cùng sau khi mọi thứ đã xong.
+         */
         if(typeof openApp==='function'){
           openApp(r.user,token);
         }
@@ -133,8 +154,7 @@
             restoreMagasinSavedState_();
           }
 
-          document.documentElement.classList.remove('magasin-session-pending');
-          finishBoot_();
+          finishSessionRestore_();
         },0);
       })
       .withFailureHandler(function(){
