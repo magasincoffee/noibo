@@ -21,6 +21,11 @@ Canonical source repository for the MAGASIN internal WebApp source and project-c
 - `web/` — standalone frontend experiment / preview for GitHub Pages
 - `docs/` — architecture, database and workflow documentation
 
+## Canonical Apps Script project manifest
+- `PROJECT_CONTROL/appsscript.json`
+- This file is the source copy of the Apps Script manifest used by the clean synchronization engine.
+- It must remain free of passwords, API keys and other secrets.
+
 ## Current canonical frontend
 - `frontend/Index.html`
 - `frontend/_styles.html`
@@ -28,16 +33,17 @@ Canonical source repository for the MAGASIN internal WebApp source and project-c
 - `frontend/_schedule.html`
 - `frontend/_attendance.html`
 - `frontend/_management.html`
+- `frontend/_phase2_ui_fix.html`
 
 ## Apps Script GitHub loader
 - `backend/18_GitHub_Frontend_Loader.gs`
 - Runtime mode: `/exec?source=github`
 - Source: `https://raw.githubusercontent.com/magasincoffee/noibo/main/frontend/`
-- Apps Script assembles the six canonical frontend files and renders them with HTML Service.
+- Apps Script assembles the canonical frontend files and renders them with HTML Service.
 - `google.script.run` remains the production client/server transport.
 
 ## Experimental GitHub Pages bridge
-The following files are retained for reference only and are not the production transport:
+The following files are retained in the repository for reference/development only and are not the production transport:
 - `web/api.js`
 - `web/api-config.js`
 - `web/api-test.html`
@@ -54,6 +60,18 @@ Reason: the chosen production architecture avoids the cross-origin iframe/fetch 
 - Session rehydration: current Sheet status/role/scope is refreshed on protected backend calls
 - Permission model: canonical page list + capability keys in `backend/07_Phân_quyền.gs`
 - Phase 2 test helper: `backend/19_Phase2_Auth_Session_Role_Test.gs`
+
+## Source synchronization
+### Clean GitHub → Apps Script V2
+- Synchronizer: `backend/20_Đồng_bộ_GitHub.gs`
+- `testDongBoGitHub()` checks Apps Script API access.
+- `previewDongBoGitHub()` builds the canonical project target without changing Apps Script.
+- `previewDongBoGitHubSyncPlan()` compares current Apps Script content with the canonical target.
+- `dongBoGitHubSangAppsScript()` backs up the current project and then replaces Apps Script HEAD with the exact canonical manifest + runtime files.
+- The synchronizer does not merge or preserve unknown legacy Apps Script files.
+- GitHub filenames are normalized to Apps Script API file names without `.gs`/`.html` extensions.
+- The manifest is sent to Apps Script as `name: appsscript`, `type: JSON`.
+- Deployment remains a separate controlled step.
 
 ## Versioning rule
 Files in canonical directories are the active source of truth. Historical snapshots, exported `.txt` copies and older versions must not silently replace canonical files.
