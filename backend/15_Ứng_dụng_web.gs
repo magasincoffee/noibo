@@ -4,13 +4,12 @@
 ========================================================= */
 
 function doGet(e) {
-  ensureOperationalSheets_();
-
   const params = (e && e.parameter) ? e.parameter : {};
 
   /*
-   * ARCH-03: Bridge cũ được giữ lại để tương thích tạm thời.
-   * Runtime chính mới không còn phụ thuộc bridge này.
+   * GitHub Pages Bridge phải được phục vụ trước mọi khởi tạo Sheet.
+   * Nếu ensureOperationalSheets_() chạy trước, một Web App anonymous/
+   * iframe request có thể fail trước khi Bridge kịp gửi READY message.
    */
   if (String(params.bridge || '') === '1') {
     return HtmlService
@@ -18,6 +17,8 @@ function doGet(e) {
       .setTitle('MAGASIN API Bridge')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
+
+  ensureOperationalSheets_();
 
   /*
    * ARCH-05:
@@ -66,21 +67,9 @@ function include(filename) {
   }
 
   try {
-    /*
-     * Các partial frontend là RAW source:
-     * - _styles     = CSS thuần
-     * - _auth       = JavaScript thuần
-     * - _schedule   = JavaScript thuần
-     * - _attendance = JavaScript thuần
-     * - _management = JavaScript thuần
-     * - _phase2_ui_fix = JavaScript/UI fix thuần
-     *
-     * Index.html tự bọc partial bằng <style>/<script>.
-     */
     return HtmlService
       .createTemplateFromFile(name)
       .getRawContent();
-
   } catch (err) {
     throw new Error(
       'Không thể nạp partial HTML "' + name + '.html". ' +
