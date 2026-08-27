@@ -1,0 +1,2937 @@
+:root{--a:#18c8c7}*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;font-family:'Be Vietnam Pro',Arial,sans-serif;color:#f7fbff;background:radial-gradient(circle at 14% 12%,#29456c 0,transparent 32%),radial-gradient(circle at 85% 85%,#0e6169 0,transparent 31%),linear-gradient(135deg,#091426,#111f36 52%,#071827)}.card{width:min(100% - 36px,430px);margin:26px 0;padding:30px;border:1px solid #ffffff18;border-radius:22px;background:#1c2b43df;box-shadow:0 24px 70px #0006}.brand{text-align:center;margin-bottom:23px}.mark{width:57px;height:57px;display:grid;place-items:center;margin:0 auto 12px;border-radius:17px;font-size:27px;background:linear-gradient(145deg,#19d6d0,#0ba8c6)}h1{font-size:25px;margin:0 0 5px}.brand p{margin:0;color:#78dedc;font-size:13px}.view{display:none}.view.active{display:block}label{display:block;margin:14px 0 7px;font-size:12px;font-weight:600;color:#d4ddeb}input{width:100%;height:48px;padding:0 13px;border:1px solid transparent;border-radius:10px;outline:0;background:#f5f8ff;color:#1a2b42;font:inherit;font-size:14px}input:focus{border-color:var(--a);box-shadow:0 0 0 4px #16c7c52d}.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}.button{width:100%;height:51px;margin-top:21px;border:0;border-radius:10px;cursor:pointer;color:white;font:700 14px inherit;background:linear-gradient(90deg,#0db6b4,#10b6d5);box-shadow:0 8px 20px #08b8c438}.button:disabled{opacity:.65}.switch{margin:18px 0 0;text-align:center;font-size:12px;color:#bac7d7}.switch a{color:#78dedc;text-decoration:none;font-weight:600}.message{min-height:18px;margin:14px 0 0;text-align:center;font-size:12px;color:#ffd193}.hint{font-size:12px;line-height:1.55;color:#bdc8d8;text-align:center}.footer{margin:20px 0 0;text-align:center;color:#8b9ab1;font-size:11px}@media(max-width:420px){.card{padding:25px 20px}.row{grid-template-columns:1fr}}
+
+/* =========================
+   APP SHELL - BỔ SUNG MỚI
+========================= */
+.app-shell{display:none;min-height:100vh;background:#f5f7fb;color:#172033}
+.app-shell.active{display:flex}
+.sidebar{width:250px;min-height:100vh;display:flex;flex-direction:column;background:#101d32;color:white}
+.app-brand{display:flex;align-items:center;gap:12px;padding:24px;border-bottom:1px solid #ffffff15}
+.app-logo{width:42px;height:42px;display:grid;place-items:center;border-radius:12px;background:linear-gradient(135deg,#19d6d0,#0ba8c6)}
+.app-brand strong{display:block}.app-brand span{display:block;margin-top:3px;font-size:11px;color:#8fa2bd}
+.menu{flex:1;padding:18px 12px}
+.menu-item{width:100%;display:flex;align-items:center;gap:12px;padding:13px 14px;margin-bottom:5px;border:0;border-radius:9px;background:transparent;color:#b8c5d8;cursor:pointer;text-align:left;font:500 14px inherit}
+.menu-item:hover{background:#ffffff10;color:white}.menu-item.active{background:#0fbab825;color:#69e7e3}
+.sidebar-bottom{padding:14px;border-top:1px solid #ffffff15}
+.user-box{display:flex;align-items:center;gap:10px;padding:10px}
+.avatar{width:38px;height:38px;display:grid;place-items:center;border-radius:50%;background:#1fc4c2;color:white;font-weight:700}
+.user-info strong,.user-info span{display:block}.user-info strong{font-size:13px}.user-info span{margin-top:3px;font-size:11px;color:#91a2b9}
+.logout-button{width:100%;padding:11px;border:0;border-radius:8px;background:#ffffff10;color:#c8d4e5;cursor:pointer}
+.logout-button:hover{background:#ffffff20;color:white}
+.main-area{flex:1;min-width:0}.topbar{padding:25px 35px;background:white;border-bottom:1px solid #e7ebf2}
+.topbar h2{margin:0;font-size:22px}.topbar p{margin:5px 0 0;color:#778197;font-size:13px}.page-content{padding:35px}
+
+PASSWORD RECOVERY UI — BỔ SUNG
+   Không thay đổi bố cục login hiện tại.
+========================================================= */
+.forgot-line{
+  margin:8px 0 -4px;
+  text-align:right;
+  font-size:12px;
+}
+.forgot-line a{
+  color:#78dedc;
+  text-decoration:none;
+  font-weight:600;
+}
+#forgot .hint,
+#reset .hint{
+  margin:0 0 18px;
+}
+
+
+
+/* =========================================================
+   EMPLOYEE PROFILE PAGE — BỔ SUNG
+========================================================= */
+.employee-profile{
+  max-width:980px;
+}
+.employee-intro{
+  margin:0 0 20px;
+  color:#64748b;
+}
+.employee-grid{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  gap:20px;
+}
+.employee-panel{
+  background:#fff;
+  border:1px solid #e7ebf2;
+  border-radius:16px;
+  padding:22px;
+  box-shadow:0 8px 24px rgba(15,23,42,.04);
+}
+.employee-panel h3{
+  margin:0 0 8px;
+  font-size:18px;
+  color:#243248;
+}
+.employee-panel p{
+  margin:0 0 18px;
+  color:#778197;
+  font-size:13px;
+  line-height:1.55;
+}
+.employee-form label{
+  display:block;
+  margin:0 0 14px;
+  font-size:13px;
+  font-weight:600;
+  color:#475569;
+}
+.employee-form input{
+  display:block;
+  width:100%;
+  height:44px;
+  margin-top:6px;
+  padding:0 12px;
+  border:1px solid #d8e0ea;
+  border-radius:10px;
+  background:#fff;
+  color:#1e293b;
+  box-sizing:border-box;
+  font-size:15px;
+}
+.employee-form input[readonly]{
+  background:#f5f7fa;
+  color:#64748b;
+}
+.employee-save{
+  width:100%;
+  min-height:46px;
+  border:0;
+  border-radius:10px;
+  margin-top:4px;
+  background:#16aebd;
+  color:#fff;
+  font-weight:700;
+  cursor:pointer;
+}
+.employee-save:disabled{
+  opacity:.65;
+  cursor:not-allowed;
+}
+.employee-message{
+  min-height:20px;
+  margin:12px 0 0;
+  font-size:13px;
+  line-height:1.45;
+}
+.password-note{
+  margin-top:10px !important;
+  padding:10px 12px;
+  border-radius:10px;
+  background:#effafb;
+  color:#0f6f79 !important;
+}
+@media(max-width:700px){
+  .employee-grid{
+    grid-template-columns:1fr;
+    gap:14px;
+  }
+  .employee-panel{
+    padding:18px 16px;
+    border-radius:14px;
+  }
+}
+
+
+/* =========================================================
+   ACCOUNT SETTINGS HUB — BỔ SUNG
+   Tài khoản được mở trực tiếp từ tên nhân viên ở sidebar.
+========================================================= */
+.user-account-button{
+  width:100%;
+  border:0;
+  background:transparent;
+  color:inherit;
+  text-align:left;
+  cursor:pointer;
+  font:inherit;
+}
+.user-account-button:hover{
+  background:#ffffff0d;
+  border-radius:10px;
+}
+.user-account-button:focus-visible{
+  outline:2px solid #5adad7;
+  outline-offset:2px;
+  border-radius:10px;
+}
+.user-account-arrow{
+  margin-left:auto;
+  color:#8fa2bd;
+  font-size:24px;
+  line-height:1;
+}
+
+.account-profile{
+  max-width:760px;
+}
+.account-profile h2{
+  margin:0;
+  color:#243248;
+}
+.account-intro{
+  margin:8px 0 22px;
+  color:#778197;
+  line-height:1.55;
+}
+.account-card,
+.account-section{
+  background:#fff;
+  border:1px solid #e7ebf2;
+  border-radius:18px;
+  box-shadow:0 8px 24px rgba(15,23,42,.04);
+}
+.account-card{
+  overflow:hidden;
+}
+.account-summary{
+  display:flex;
+  align-items:center;
+  gap:16px;
+  padding:22px;
+}
+.account-avatar{
+  width:58px;
+  height:58px;
+  display:grid;
+  place-items:center;
+  flex:0 0 58px;
+  border-radius:50%;
+  background:linear-gradient(135deg,#19d6d0,#0ba8c6);
+  color:#fff;
+  font-size:22px;
+  font-weight:700;
+}
+.account-summary-name{
+  min-width:0;
+}
+.account-summary-name strong,
+.account-summary-name span{
+  display:block;
+}
+.account-summary-name strong{
+  color:#243248;
+  font-size:18px;
+}
+.account-summary-name span{
+  margin-top:4px;
+  color:#778197;
+  font-size:13px;
+}
+.account-list{
+  border-top:1px solid #edf0f5;
+}
+.account-item{
+  width:100%;
+  min-height:68px;
+  display:flex;
+  align-items:center;
+  gap:14px;
+  padding:14px 20px;
+  border:0;
+  border-bottom:1px solid #edf0f5;
+  background:#fff;
+  color:#243248;
+  text-align:left;
+  cursor:pointer;
+  font:inherit;
+}
+.account-item:last-child{
+  border-bottom:0;
+}
+.account-item:hover{
+  background:#f8fafc;
+}
+.account-item-icon{
+  width:36px;
+  height:36px;
+  display:grid;
+  place-items:center;
+  border-radius:10px;
+  background:#effafb;
+  font-size:18px;
+}
+.account-item-text{
+  min-width:0;
+  flex:1;
+}
+.account-item-text strong,
+.account-item-text span{
+  display:block;
+}
+.account-item-text strong{
+  font-size:15px;
+  color:#243248;
+}
+.account-item-text span{
+  margin-top:3px;
+  color:#8a94a5;
+  font-size:12px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.account-item-arrow{
+  color:#8fa2bd;
+  font-size:24px;
+}
+.account-section{
+  padding:22px;
+}
+.account-back{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:0;
+  margin:0 0 18px;
+  border:0;
+  background:transparent;
+  color:#0f9ca5;
+  font:600 14px inherit;
+  cursor:pointer;
+}
+.account-section h3{
+  margin:0 0 6px;
+  color:#243248;
+  font-size:20px;
+}
+.account-section > p{
+  margin:0 0 20px;
+  color:#778197;
+  font-size:13px;
+  line-height:1.55;
+}
+.account-readonly{
+  padding:14px 16px;
+  border-radius:12px;
+  background:#f5f7fa;
+  border:1px solid #e7ebf2;
+  color:#475569;
+  font-size:15px;
+  word-break:break-word;
+}
+.account-field-label{
+  display:block;
+  margin:0 0 7px;
+  color:#475569;
+  font-size:13px;
+  font-weight:600;
+}
+.account-help{
+  margin-top:12px !important;
+  padding:11px 12px;
+  border-radius:10px;
+  background:#effafb;
+  color:#0f6f79 !important;
+}
+@media(max-width:700px){
+  .account-profile{
+    max-width:none;
+  }
+  .account-summary{
+    padding:18px 16px;
+  }
+  .account-item{
+    min-height:64px;
+    padding:12px 16px;
+  }
+  .account-section{
+    padding:18px 16px;
+    border-radius:14px;
+  }
+}
+
+
+/* MAGASIN BRAND LOGO */
+.magasin-logo{
+  width:100%;
+  height:100%;
+  display:block;
+}
+.mark .magasin-logo{
+  width:42px;
+  height:42px;
+}
+.app-logo .magasin-logo{
+  width:30px;
+  height:30px;
+}
+
+
+/* =========================================================
+   ROLE BASED ACCESS + OWNER USER MANAGEMENT — BỔ SUNG
+========================================================= */
+.owner-management{max-width:1100px}
+.owner-toolbar{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap}
+.owner-toolbar input{max-width:360px;height:44px;border:1px solid #d8e0ea;border-radius:10px;padding:0 12px;background:#fff;color:#1e293b}
+.owner-list{display:grid;gap:12px}
+.owner-user-card{background:#fff;border:1px solid #e7ebf2;border-radius:16px;padding:18px;box-shadow:0 8px 24px rgba(15,23,42,.04)}
+.owner-user-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:14px}
+.owner-user-name{font-weight:700;color:#243248;font-size:16px}.owner-user-meta{margin-top:4px;color:#778197;font-size:12px}
+.owner-user-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.owner-user-grid label{margin:0;color:#475569;font-size:12px;font-weight:600}
+.owner-user-grid select,.owner-user-grid input{display:block;width:100%;height:42px;margin-top:6px;padding:0 10px;border:1px solid #d8e0ea;border-radius:9px;background:#fff;color:#1e293b;font:inherit}
+.owner-save-row{display:flex;justify-content:flex-end;margin-top:14px}.owner-save{min-height:42px;padding:0 18px;border:0;border-radius:9px;background:#16aebd;color:#fff;font-weight:700;cursor:pointer}
+.owner-settings-entry{max-width:760px}
+.settings-action-card{width:100%;display:flex;align-items:center;gap:14px;padding:18px;border:1px solid #e7ebf2;border-radius:16px;background:#fff;text-align:left;cursor:pointer;font:inherit;color:#243248;box-shadow:0 8px 24px rgba(15,23,42,.04)}
+.settings-action-card:hover{background:#f8fafc}.settings-action-card .arrow{margin-left:auto;font-size:24px;color:#8fa2bd}
+.role-badge{display:inline-flex;padding:4px 9px;border-radius:999px;background:#effafb;color:#0f6f79;font-size:12px;font-weight:700}
+@media(max-width:700px){.owner-user-card{padding:16px}.owner-user-grid{grid-template-columns:1fr}.owner-toolbar input{max-width:none;width:100%}.owner-toolbar{align-items:stretch}.owner-save-row{justify-content:stretch}.owner-save{width:100%}}
+
+
+/* =========================================================
+   PASSWORD VISIBILITY — BỔ SUNG
+   Hiển thị / ẩn mật khẩu bằng biểu tượng mắt
+========================================================= */
+.password-field{
+  position:relative;
+  display:block;
+  width:100%;
+}
+.password-field input[type="password"],
+.password-field input[type="text"]{
+  padding-right:52px !important;
+}
+.password-toggle{
+  position:absolute;
+  right:10px;
+  top:50%;
+  transform:translateY(-50%);
+  width:38px;
+  height:38px;
+  border:0;
+  border-radius:10px;
+  background:transparent;
+  color:#64748b;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  padding:0;
+  z-index:2;
+  -webkit-tap-highlight-color:transparent;
+}
+.password-toggle:hover{background:rgba(15,118,110,.08);color:#0f766e;}
+.password-toggle:focus-visible{outline:2px solid #18aebd;outline-offset:2px;}
+.password-toggle svg{width:22px;height:22px;display:block;}
+.password-toggle .icon-eye-off{display:none;}
+.password-toggle.is-visible .icon-eye{display:none;}
+.password-toggle.is-visible .icon-eye-off{display:block;}
+@media(max-width:700px){
+  .password-toggle{right:8px;width:42px;height:42px;}
+}
+
+
+
+/* =========================================================
+   TÁC VỤ NHÂN VIÊN — SIDEBAR CÙNG CẤP
+========================================================= */
+.staff-task-menu-item{
+  display:none;
+}
+.staff-task-menu-item.is-visible{
+  display:flex;
+}
+
+/* Khi nhân viên dùng tác vụ, không tạo thụt lề như menu con */
+.staff-task-menu-item{
+  margin-left:0;
+  padding-left:14px;
+}
+
+@media(max-width:768px){
+  .staff-task-menu-item.is-visible{
+    display:flex;
+  }
+}
+
+/* STAFF BASIC TASKS — BỔ SUNG */
+.staff-task-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:16px;
+  margin-top:22px;
+}
+.staff-task-card{
+  width:100%;
+  min-height:142px;
+  display:flex;
+  align-items:center;
+  gap:14px;
+  text-align:left;
+  border:1px solid #d8e1ee;
+  border-radius:16px;
+  background:#fff;
+  padding:20px;
+  cursor:pointer;
+  color:#243247;
+  box-shadow:0 4px 18px rgba(24,43,70,.06);
+}
+.staff-task-card:hover{
+  border-color:#29a9b7;
+  transform:translateY(-1px);
+}
+.staff-task-card .staff-task-icon{
+  width:46px;
+  height:46px;
+  flex:0 0 46px;
+  display:grid;
+  place-items:center;
+  border-radius:13px;
+  background:#e9fbfb;
+  font-size:23px;
+}
+.staff-task-card span:nth-child(2){
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  min-width:0;
+}
+.staff-task-card strong{font-size:16px}
+.staff-task-card small{
+  color:#718096;
+  line-height:1.45;
+  font-size:13px;
+}
+.staff-task-card b{
+  margin-left:auto;
+  font-size:24px;
+  color:#17a6b2;
+  font-weight:400;
+}
+
+@media(max-width:900px){
+  .staff-task-grid{grid-template-columns:1fr;gap:12px}
+  .staff-task-card{min-height:92px;padding:16px}
+}
+
+
+/* =========================================================
+   NHÂN VIÊN — MODULE SIDEBAR + WORKSPACE
+========================================================= */
+.staff-task-menu-item{display:none}
+.staff-task-menu-item.active{background:#0fbab825;color:#69e7e3}
+.employee-module{max-width:1100px}
+.employee-module-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+.employee-module-head h2{margin:0;color:#243248;font-size:24px}
+.employee-module-head p{margin:6px 0 0;color:#778197;font-size:13px}
+.employee-action-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.employee-action-card{background:#fff;border:1px solid #e7ebf2;border-radius:16px;padding:18px;box-shadow:0 8px 24px rgba(15,23,42,.04)}
+.employee-action-card h3{margin:0 0 6px;color:#243248;font-size:17px}
+.employee-action-card p{margin:0 0 14px;color:#778197;font-size:13px;line-height:1.5}
+.employee-inline-actions{display:flex;gap:10px;flex-wrap:wrap}
+.employee-btn{min-height:42px;padding:0 15px;border:0;border-radius:10px;background:#16aebd;color:#fff;font-weight:700;cursor:pointer}
+.employee-btn.secondary{background:#eef7f8;color:#0f6f79}
+.employee-btn.danger{background:#fff1f2;color:#be123c}
+.employee-status{min-height:20px;margin-top:10px;font-size:13px}
+.employee-table-wrap{overflow:auto;border:1px solid #e7ebf2;border-radius:14px;background:#fff}
+.employee-table{width:100%;border-collapse:collapse;min-width:650px}
+.employee-table th,.employee-table td{padding:12px 14px;border-bottom:1px solid #edf0f5;text-align:left;font-size:13px}
+.employee-table th{background:#f8fafc;color:#475569;font-weight:700}
+.employee-table td{color:#334155}
+.employee-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.employee-form-grid label{color:#475569}
+.employee-form-grid input,.employee-form-grid select,.employee-form-grid textarea{display:block;width:100%;margin-top:6px;padding:11px 12px;border:1px solid #d8e0ea;border-radius:10px;background:#fff;color:#1e293b;font:inherit}
+.employee-form-grid textarea{min-height:100px;resize:vertical}
+.employee-kpi-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:16px}
+.employee-kpi-card{background:#fff;border:1px solid #e7ebf2;border-radius:14px;padding:16px}
+.employee-kpi-card strong{display:block;font-size:24px;color:#0f9ca5;margin-top:6px}
+.employee-kpi-card span{font-size:12px;color:#778197}
+.employee-empty{padding:26px;text-align:center;color:#778197}
+.employee-schedule-board{background:#fff;border:1px solid #e7ebf2;border-radius:16px;padding:18px;box-shadow:0 8px 24px rgba(15,23,42,.04);margin-bottom:16px}.employee-schedule-board-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}.employee-schedule-board-head h3{margin:0;color:#243248;font-size:17px}.employee-schedule-week-label{font-size:13px;color:#64748b;font-weight:600}.employee-schedule-nav{display:flex;gap:8px}.employee-schedule-nav button{height:36px;min-width:36px;padding:0 10px;border:1px solid #dbe3ec;border-radius:9px;background:#fff;color:#0f7f89;cursor:pointer}.employee-week-grid{display:grid;grid-template-columns:repeat(7,minmax(135px,1fr));gap:10px;overflow-x:auto}.employee-day-card{min-height:165px;border:1px solid #e7ebf2;border-radius:13px;padding:12px;background:#fbfcfe}.employee-day-card.today{border-color:#16aebd;box-shadow:0 0 0 2px rgba(22,174,189,.10)}.employee-day-head{display:flex;flex-direction:column;gap:2px;margin-bottom:10px}.employee-day-head strong{font-size:14px;color:#243248;text-transform:uppercase}.employee-day-head span{font-size:12px;color:#778197}.employee-shift-chip{padding:9px 10px;margin-bottom:7px;border-radius:10px;background:#eafafb;color:#0f6470;font-size:12px;line-height:1.45}.employee-shift-chip strong{display:block;color:#243248;font-size:13px}.employee-shift-chip.pending{background:#fff7e6}.employee-shift-chip.cancelled{background:#fff1f2;color:#be123c}.employee-day-empty{padding-top:22px;color:#a0a9b8;font-size:12px;text-align:center}@media(max-width:700px){.employee-schedule-board{padding:14px}.employee-week-grid{grid-template-columns:repeat(7,minmax(150px,1fr))}}
+@media(max-width:700px){
+  .employee-action-grid,.employee-form-grid,.employee-kpi-grid{grid-template-columns:1fr}
+  .employee-module{max-width:none}
+}
+/* ============================================================
+   EMPLOYEE WEEK SCHEDULE — MULTI SHIFT
+   ============================================================ */
+
+.employee-week-schedule{
+  display:grid;
+  grid-template-columns:repeat(7,minmax(0,1fr));
+  gap:12px;
+  width:100%;
+}
+
+.employee-day-card{
+  min-height:300px;
+  padding:14px;
+  border:1px solid var(--border-color,#d9e0ea);
+  border-radius:18px;
+  background:#ffffff;
+  display:flex;
+  flex-direction:column;
+  transition:.2s ease;
+}
+
+.employee-day-card.today{
+  border-color:#35a9b8;
+  box-shadow:0 0 0 2px rgba(53,169,184,.10);
+}
+
+.employee-day-head{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  padding-bottom:12px;
+  margin-bottom:12px;
+  border-bottom:1px solid #edf0f4;
+}
+
+.employee-day-head strong{
+  font-size:15px;
+  font-weight:700;
+  color:#223047;
+}
+
+.employee-day-head span{
+  font-size:13px;
+  color:#718096;
+}
+
+.employee-day-shifts{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.employee-shift-chip{
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+  padding:10px 11px;
+  border-radius:12px;
+  border:1px solid rgba(0,0,0,.06);
+  min-height:74px;
+  box-sizing:border-box;
+}
+
+.employee-shift-chip strong{
+  font-size:13px;
+  font-weight:700;
+  color:#26364b;
+}
+
+.employee-shift-time{
+  font-size:13px;
+  font-weight:600;
+  color:#34475d;
+}
+
+.employee-shift-store{
+  font-size:12px;
+  color:#64748b;
+}
+
+.employee-shift-status{
+  display:inline-flex;
+  align-self:flex-start;
+  margin-top:3px;
+  padding:3px 7px;
+  border-radius:999px;
+  font-size:11px;
+  font-weight:600;
+  line-height:1.2;
+  background:rgba(255,255,255,.55);
+  color:#405164;
+}
+
+/* Ca sáng */
+.employee-shift-chip.shift-morning{
+  background:#fff7b8;
+  border-color:#f0d84d;
+}
+
+/* Ca chiều */
+.employee-shift-chip.shift-afternoon{
+  background:#ffd9d6;
+  border-color:#eeaaa4;
+}
+
+/* Ca tối */
+.employee-shift-chip.shift-evening{
+  background:#bfeff0;
+  border-color:#61c7ca;
+}
+
+/* Ca khác */
+.employee-shift-chip.shift-other{
+  background:#e8eef5;
+  border-color:#c8d3df;
+}
+
+/* Chờ duyệt */
+.employee-shift-chip.pending{
+  opacity:.82;
+  border-style:dashed;
+}
+
+.employee-shift-chip.pending .employee-shift-status{
+  background:#fff1c2;
+  color:#8a6410;
+}
+
+/* Đã hủy */
+.employee-shift-chip.cancelled{
+  opacity:.58;
+  text-decoration:line-through;
+  filter:grayscale(.45);
+}
+
+.employee-day-empty{
+  flex:1;
+  min-height:100px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:#94a3b8;
+  font-size:13px;
+  border:1px dashed #d8e0e8;
+  border-radius:12px;
+  background:#fafbfd;
+}
+
+/* Tablet */
+@media(max-width:1100px){
+  .employee-week-schedule{
+    grid-template-columns:repeat(4,minmax(180px,1fr));
+    overflow-x:auto;
+  }
+}
+
+/* Mobile */
+@media(max-width:700px){
+  .employee-week-schedule{
+    grid-template-columns:1fr;
+  }
+
+  .employee-day-card{
+    min-height:auto;
+  }
+
+  .employee-day-empty{
+    min-height:70px;
+  }
+}
+
+/* ATTENDANCE MODULE */
+.attendance-my-summary,.attendance-summary-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:14px}.attendance-summary-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.attendance-summary-card{background:#fff;border:1px solid #e4eaf1;border-radius:14px;padding:15px;box-shadow:0 5px 16px rgba(15,23,42,.04)}.attendance-summary-card span{display:block;font-size:12px;color:#778197}.attendance-summary-card strong{display:block;margin-top:6px;font-size:20px;color:#22344a}.attendance-clock-card{display:flex;justify-content:space-between;gap:18px;align-items:center;background:#fff;border:1px solid #e4eaf1;border-radius:16px;padding:18px}.attendance-clock-card h3{margin:0 0 5px}.attendance-clock-card p{margin:0;color:#718096;font-size:13px}.attendance-clock-actions{display:flex;gap:8px}.attendance-table-wrap{overflow:auto;border:1px solid #e4eaf1;border-radius:12px}.attendance-table{width:100%;min-width:900px;border-collapse:collapse}.attendance-table th,.attendance-table td{padding:10px;border-bottom:1px solid #edf1f5;text-align:left;font-size:12px;white-space:nowrap}.attendance-table th{background:#f7fafc;color:#475569}.attendance-money{font-weight:700;color:#0e8d8f}.attendance-management-head{margin-bottom:18px}.attendance-management-head h2{margin:0;color:#243248}.attendance-management-head p{margin:6px 0 0;color:#778197;font-size:13px}.attendance-filter-card{background:#fff;border:1px solid #e4eaf1;border-radius:16px;padding:16px;margin-bottom:14px}.attendance-filter-grid{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:12px;align-items:end}.attendance-filter-grid label{margin:0;color:#475569}.attendance-filter-grid input,.attendance-filter-grid select{display:block;width:100%;margin-top:6px;padding:10px;border:1px solid #d7e0ea;border-radius:10px;background:#fff}.manager-attendance-menu-item{display:none}.manager-attendance-stack{max-width:100%}@media(max-width:900px){.attendance-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.attendance-filter-grid{grid-template-columns:1fr 1fr}}@media(max-width:560px){.attendance-my-summary,.attendance-summary-grid{grid-template-columns:1fr 1fr}.attendance-clock-card{flex-direction:column;align-items:flex-start}.attendance-clock-actions{width:100%}.attendance-clock-actions button{flex:1}.attendance-filter-grid{grid-template-columns:1fr}}
+
+/* =========================================================
+   CHẤM CÔNG — FORM XÁC NHẬN + SỬA TRONG 24 GIỜ
+========================================================= */
+.attendance-employee-module{display:grid;gap:16px}
+.attendance-form-card{
+  background:#fff;
+  border:1px solid #e4eaf1;
+  border-radius:18px;
+  padding:20px;
+  box-shadow:0 8px 24px rgba(15,23,42,.04);
+}
+.attendance-form-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:16px;
+  margin-bottom:18px;
+}
+.attendance-form-head h2{margin:0;color:#243248}
+.attendance-form-head p{margin:6px 0 0;color:#778197;font-size:13px}
+.attendance-edit-rule{
+  display:inline-flex;
+  align-items:center;
+  padding:7px 10px;
+  border-radius:999px;
+  background:#fff7e6;
+  color:#a16207;
+  font-size:11px;
+  font-weight:700;
+  white-space:nowrap;
+}
+.attendance-form-grid{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:12px;
+}
+.attendance-form-grid label{margin:0;color:#475569}
+.attendance-form-grid select{appearance:auto;min-height:48px;cursor:pointer}
+.attendance-time-pair{
+  display:grid;
+  grid-template-columns:1fr auto 1fr;
+  align-items:center;
+  gap:6px;
+}
+.attendance-time-pair span{
+  margin-top:6px;
+  color:#64748b;
+  font-weight:700;
+}
+.attendance-time-pair select{min-width:0}
+
+.attendance-form-grid input,
+.attendance-form-grid select{
+  display:block;
+  width:100%;
+  margin-top:6px;
+  padding:11px 12px;
+  border:1px solid #d7e0ea;
+  border-radius:10px;
+  background:#fff;
+  color:#1e293b;
+  font:inherit;
+}
+.attendance-confirm-row{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-top:16px;
+}
+.attendance-confirm-row .employee-status{
+  flex:1 1 260px;
+  margin:0;
+}
+.attendance-history-card{overflow:hidden}
+.attendance-history-head{margin-bottom:14px}
+.attendance-history-head h3{margin:0;color:#243248}
+.attendance-history-head p{margin:5px 0 0;color:#778197;font-size:13px}
+.attendance-edit-btn{
+  border:1px solid #b9dfe2;
+  background:#effbfc;
+  color:#0e7e86;
+  border-radius:8px;
+  padding:7px 10px;
+  cursor:pointer;
+  font-size:12px;
+  font-weight:700;
+}
+.attendance-edit-btn:hover{background:#dff6f7}
+@media(max-width:900px){
+  .attendance-form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:560px){
+  .attendance-form-card{padding:16px}
+  .attendance-form-head{flex-direction:column}
+  .attendance-edit-rule{white-space:normal}
+  .attendance-form-grid{grid-template-columns:1fr}
+  .attendance-confirm-row{flex-direction:column;align-items:stretch}
+  .attendance-confirm-row button{width:100%}
+  .attendance-my-table{min-width:1050px}
+}
+
+
+/* =========================================================
+   CHẤM CÔNG — TRA CỨU KHOẢNG NGÀY + 24 GIỜ
+========================================================= */
+.attendance-history-filter-card{
+  margin-bottom:14px;
+}
+
+.attendance-history-filter-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:14px;
+  margin-bottom:14px;
+}
+
+.attendance-history-filter-head h3{
+  margin:0;
+  color:#243248;
+}
+
+.attendance-history-filter-head p{
+  margin:5px 0 0;
+  color:#778197;
+  font-size:13px;
+}
+
+.attendance-history-filter-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr auto;
+  align-items:end;
+  gap:12px;
+}
+
+.attendance-history-filter-grid label{
+  margin:0;
+  color:#475569;
+}
+
+.attendance-history-filter-grid input{
+  display:block;
+  width:100%;
+  margin-top:6px;
+  min-height:44px;
+}
+
+.attendance-filter-reset{
+  min-height:44px;
+  padding:0 14px;
+  border:1px solid #cfe3e7;
+  border-radius:10px;
+  background:#f3fbfc;
+  color:#0e7e86;
+  cursor:pointer;
+  font:600 13px inherit;
+}
+
+.attendance-filter-reset:hover{
+  background:#e7f8f9;
+}
+
+@media(max-width:720px){
+  .attendance-history-filter-grid{
+    grid-template-columns:1fr;
+  }
+
+  .attendance-history-filter-grid .employee-btn,
+  .attendance-filter-reset{
+    width:100%;
+  }
+
+  .attendance-history-filter-head{
+    flex-direction:column;
+  }
+}
+
+
+/* CHẤM CÔNG - giờ 24h Việt Nam, không dùng giao diện AM/PM của trình duyệt */
+.attendance-form-grid input[type="text"]{
+  letter-spacing:.3px;
+}
+.attendance-form-grid input::placeholder{
+  color:#8b98aa;
+}
+
+/* =========================================================
+   CHẤM CÔNG V29 — DASHBOARD + TIME SELECTOR 1 Ô
+   Chỉ bổ sung hiển thị; giữ nguyên backend/API.
+========================================================= */
+
+.attendance-dashboard-card{
+  background:
+    linear-gradient(135deg,#ffffff 0%,#f8fbff 58%,#eefbfb 100%);
+  border:1px solid #dfe8f0;
+  border-radius:20px;
+  padding:20px;
+  box-shadow:0 12px 32px rgba(15,23,42,.06);
+}
+
+.attendance-dashboard-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:16px;
+  margin-bottom:16px;
+}
+
+.attendance-dashboard-kicker,
+.attendance-section-kicker{
+  color:#0d8f95;
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.11em;
+  text-transform:uppercase;
+}
+
+.attendance-dashboard-head h2{
+  margin:4px 0 4px;
+  color:#182b45;
+  font-size:23px;
+}
+
+.attendance-dashboard-head p{
+  margin:0;
+  color:#738197;
+  font-size:12px;
+}
+
+.attendance-dashboard-badge{
+  flex:0 0 auto;
+  padding:8px 11px;
+  border-radius:999px;
+  background:#e9fbfb;
+  color:#0b7e83;
+  font-size:11px;
+  font-weight:800;
+  border:1px solid #c9efef;
+}
+
+.attendance-dashboard-grid{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:12px;
+}
+
+.attendance-dashboard-stat{
+  min-width:0;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:15px;
+  border:1px solid #e2eaf2;
+  border-radius:15px;
+  background:#fff;
+}
+
+.attendance-stat-icon{
+  flex:0 0 40px;
+  width:40px;
+  height:40px;
+  display:grid;
+  place-items:center;
+  border-radius:12px;
+  font-size:17px;
+  font-weight:800;
+}
+
+.attendance-dashboard-stat.hours .attendance-stat-icon{
+  background:#e8f6ff;color:#1976a8;
+}
+.attendance-dashboard-stat.amount .attendance-stat-icon{
+  background:#e9fbf2;color:#12815a;
+}
+.attendance-dashboard-stat.shifts .attendance-stat-icon{
+  background:#fff6e7;color:#a76c00;
+}
+.attendance-dashboard-stat.average .attendance-stat-icon{
+  background:#f0edff;color:#6756b9;
+}
+
+.attendance-stat-content{
+  min-width:0;
+}
+.attendance-stat-content span{
+  display:block;
+  color:#6f7e93;
+  font-size:11px;
+}
+.attendance-stat-content strong{
+  display:block;
+  margin-top:3px;
+  color:#1b304a;
+  font-size:24px;
+  line-height:1.1;
+}
+.attendance-stat-content small{
+  display:block;
+  margin-top:4px;
+  color:#9aa6b6;
+  font-size:9px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.attendance-form-card{
+  padding:20px;
+}
+
+.attendance-form-head{
+  margin-bottom:16px;
+}
+
+.attendance-form-head h2{
+  margin-top:4px;
+}
+
+.attendance-form-grid{
+  grid-template-columns:1.1fr 1.1fr 1fr 1fr;
+  gap:14px;
+}
+
+.attendance-form-grid label{
+  font-size:12px;
+  font-weight:700;
+}
+
+.attendance-form-grid input,
+.attendance-form-grid select{
+  min-height:50px;
+  margin-top:7px;
+  border-radius:12px;
+  font-size:14px;
+  font-weight:600;
+}
+
+.attendance-form-grid select{
+  appearance:auto;
+  cursor:pointer;
+}
+
+.attendance-time-note{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin-top:10px;
+  color:#748399;
+  font-size:11px;
+}
+
+.attendance-time-note-icon{
+  color:#12a6a7;
+  font-size:9px;
+}
+
+.attendance-confirm-row{
+  margin-top:14px;
+}
+
+.attendance-history-filter-card{
+  margin-bottom:0;
+}
+
+.attendance-history-filter-head .attendance-section-kicker{
+  margin-bottom:3px;
+}
+
+@media(max-width:1100px){
+  .attendance-dashboard-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+  .attendance-form-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+}
+
+@media(max-width:560px){
+  .attendance-dashboard-card{
+    padding:16px;
+    border-radius:17px;
+  }
+
+  .attendance-dashboard-head{
+    flex-direction:column;
+    gap:10px;
+  }
+
+  .attendance-dashboard-badge{
+    align-self:flex-start;
+  }
+
+  .attendance-dashboard-grid{
+    grid-template-columns:1fr 1fr;
+    gap:9px;
+  }
+
+  .attendance-dashboard-stat{
+    padding:12px;
+    gap:9px;
+    align-items:flex-start;
+  }
+
+  .attendance-stat-icon{
+    flex-basis:34px;
+    width:34px;
+    height:34px;
+    font-size:15px;
+    border-radius:10px;
+  }
+
+  .attendance-stat-content strong{
+    font-size:19px;
+  }
+
+  .attendance-stat-content small{
+    white-space:normal;
+    line-height:1.35;
+  }
+
+  .attendance-form-grid{
+    grid-template-columns:1fr;
+  }
+
+  .attendance-time-note{
+    line-height:1.45;
+  }
+}
+
+@media(max-width:380px){
+  .attendance-dashboard-grid{
+    grid-template-columns:1fr;
+  }
+}
+
+
+/* =========================================================
+   MAGASIN — QUẢN LÝ CHẤM CÔNG V30
+========================================================= */
+.attendance-manager-dashboard{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:16px}
+.attendance-manager-card{background:#fff;border:1px solid #e1e7ef;border-radius:16px;padding:18px;box-shadow:0 8px 24px rgba(15,23,42,.04)}
+.attendance-manager-card .label{font-size:12px;color:#718096;margin-bottom:5px}
+.attendance-manager-card .value{font-size:24px;font-weight:700;color:#17304f}
+.attendance-manager-card .sub{margin-top:4px;font-size:11px;color:#8a97a8}
+.attendance-manager-section{background:#fff;border:1px solid #e1e7ef;border-radius:18px;padding:20px;margin-top:16px;box-shadow:0 8px 24px rgba(15,23,42,.04)}
+.attendance-manager-section h3{margin:0 0 14px;font-size:18px;color:#1f3047}
+.attendance-store-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.attendance-store-card{border:1px solid #dfe7ef;border-radius:14px;padding:14px;background:#fbfcfe}
+.attendance-store-card strong{display:block;font-size:15px;color:#1f3047;margin-bottom:8px}
+.attendance-store-card .store-hours{font-size:21px;font-weight:700;color:#139c9c}
+.attendance-store-card .store-meta{display:flex;justify-content:space-between;gap:8px;margin-top:6px;font-size:11px;color:#6d7b8c}
+.attendance-mini-bar{height:7px;border-radius:999px;background:#e9eef4;overflow:hidden;margin-top:10px}
+.attendance-mini-bar span{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#11b8b7,#18c6d2)}
+ .attendance-filter-title{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:14px}.attendance-filter-title h3{margin-bottom:3px}.attendance-filter-subtitle{margin:0;color:#7a8799;font-size:12px}.attendance-vn-time{display:inline-flex;align-items:center;min-height:32px;padding:0 11px;border-radius:999px;background:#eefafa;color:#0b8f90;font-size:11px;font-weight:700;white-space:nowrap}.attendance-store-field{min-width:0}.attendance-store-select{width:100%;height:44px;padding:0 40px 0 12px;border:1px solid #d7e1ea;border-radius:10px;background:#fff;color:#1c2d43;font:500 13px 'Be Vietnam Pro',Arial,sans-serif;outline:0;cursor:pointer}.attendance-store-select:focus{border-color:#19b5b5;box-shadow:0 0 0 3px rgba(24,200,199,.14)}.attendance-manager-apply{height:44px;white-space:nowrap}.attendance-manager-filter{display:grid;grid-template-columns:1fr 1fr minmax(190px,.85fr) auto;gap:12px;align-items:end}
+.attendance-manager-actions{display:flex;gap:8px;flex-wrap:wrap}
+.attendance-manager-edit,.attendance-manager-delete{border-radius:8px;padding:7px 10px;cursor:pointer;font-weight:600}
+.attendance-manager-edit{border:1px solid #19b5b5;color:#0b8f90;background:#effcfc}
+.attendance-manager-delete{border:1px solid #f0b4b8;color:#c2414a;background:#fff5f5}
+.attendance-manager-modal{position:fixed;inset:0;z-index:1000;display:none;align-items:center;justify-content:center;background:rgba(8,18,35,.48);padding:18px}
+.attendance-manager-modal.active{display:flex}
+.attendance-manager-dialog{width:min(100%,620px);max-height:min(90vh,760px);overflow:auto;background:#fff;border-radius:20px;padding:22px;box-shadow:0 24px 80px rgba(0,0,0,.22);color:#1f3047}
+.attendance-manager-dialog h3{margin:0 0 4px;font-size:20px}
+.attendance-manager-dialog .dialog-note{margin:0 0 16px;color:#718096;font-size:13px}
+.attendance-manager-edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.attendance-manager-dialog select,.attendance-manager-dialog input,.attendance-manager-dialog textarea{width:100%;min-height:44px;border:1px solid #d8e1eb;border-radius:10px;padding:9px 11px;font:inherit;color:#1f3047;background:#fff}
+.attendance-manager-dialog textarea{min-height:90px;resize:vertical}
+.attendance-manager-dialog label{color:#42546a;font-size:12px;margin:0 0 6px}
+.attendance-manager-dialog .dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+.attendance-manager-dialog .dialog-cancel,.attendance-manager-dialog .dialog-save{border:0;padding:10px 16px;border-radius:9px;cursor:pointer}
+.attendance-manager-dialog .dialog-cancel{background:#edf3f8;color:#34465c}
+.attendance-manager-dialog .dialog-save{background:#14b8b7;color:#fff;font-weight:700}
+.attendance-manager-notice{margin-top:10px;font-size:12px;min-height:18px}
+@media(max-width:1100px){.attendance-manager-dashboard,.attendance-store-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.attendance-manager-filter{grid-template-columns:1fr 1fr}}
+@media(max-width:700px){.attendance-manager-dashboard,.attendance-store-grid,.attendance-manager-filter,.attendance-manager-edit-grid{grid-template-columns:1fr}.attendance-filter-title{display:block}.attendance-vn-time{margin-top:8px}.attendance-manager-section{padding:14px}}
+
+
+
+/* =========================================================
+
+/* =========================================================
+   MAGASIN RESPONSIVE SYSTEM V2 — SINGLE SOURCE OF TRUTH
+   Desktop / Tablet / Mobile dùng chung HTML + JS.
+   Không dùng bottom navigation.
+   Không phụ thuộc hệ mobile legacy.
+   State sidebar duy nhất: .is-expanded
+========================================================= */
+
+/* ---------- APP SHELL / DESKTOP ---------- */
+.app-shell.active{
+  position:fixed;
+  inset:0;
+  z-index:10;
+  width:100vw;
+  height:100dvh;
+  min-height:100dvh;
+  display:flex;
+  flex-direction:row;
+  overflow:hidden;
+}
+
+.sidebar{
+  position:relative;
+  flex:0 0 250px;
+  width:250px;
+  min-width:250px;
+  max-width:250px;
+  height:100dvh;
+  min-height:100dvh;
+  overflow-y:auto;
+  overflow-x:hidden;
+}
+
+.main-area{
+  flex:1 1 auto;
+  width:auto;
+  min-width:0;
+  height:100dvh;
+  min-height:0;
+  overflow-y:auto;
+  overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;
+}
+
+.topbar{
+  width:100%;
+  box-sizing:border-box;
+}
+
+.page-content{
+  width:100%;
+  max-width:1600px;
+  min-width:0;
+  margin:0 auto;
+}
+
+/* Desktop lớn */
+@media (min-width:1440px){
+  .sidebar{
+    flex-basis:270px;
+    width:270px;
+    min-width:270px;
+    max-width:270px;
+  }
+
+  .topbar{
+    padding:28px clamp(32px,4vw,72px);
+  }
+
+  .page-content{
+    padding:clamp(32px,4vw,72px);
+  }
+}
+
+/* Laptop / tablet ngang */
+@media (min-width:769px) and (max-width:1199px){
+  .sidebar{
+    flex-basis:220px;
+    width:220px;
+    min-width:220px;
+    max-width:220px;
+  }
+
+  .app-brand{
+    padding:20px;
+  }
+
+  .topbar{
+    padding:22px 28px;
+  }
+
+  .page-content{
+    padding:28px;
+  }
+}
+
+/* Tablet / laptop tiêu chuẩn */
+@media (min-width:1200px) and (max-width:1439px){
+  .topbar{
+    padding:25px 35px;
+  }
+
+  .page-content{
+    padding:35px;
+  }
+}
+
+/* ---------- SIDEBAR TOGGLE ---------- */
+.sidebar-toggle{
+  position:absolute;
+  top:16px;
+  right:-16px;
+  z-index:60;
+  width:32px;
+  height:32px;
+  display:grid;
+  place-items:center;
+  padding:0;
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:50%;
+  background:#17263f;
+  color:#dce9f8;
+  font:700 16px/1 Arial,sans-serif;
+  cursor:pointer;
+  box-shadow:0 4px 14px rgba(0,0,0,.22);
+}
+
+.sidebar.is-expanded .sidebar-toggle{
+  transform:rotate(180deg);
+}
+
+/* ---------- LOGIN / AUTH RESPONSIVE ---------- */
+@media screen and (max-width:900px){
+  html,
+  body{
+    width:100%;
+    max-width:100%;
+    min-width:0;
+    overflow-x:hidden;
+  }
+}
+
+@media screen and (max-width:600px){
+  body{
+    display:block;
+    min-height:100dvh;
+  }
+
+  .card{
+    position:relative;
+    top:auto;
+    left:auto;
+    right:auto;
+    transform:none;
+    width:calc(100% - 24px);
+    max-width:430px;
+    min-width:0;
+    margin:12px auto 18px;
+    padding:22px 18px 24px;
+    border-radius:18px;
+    box-sizing:border-box;
+    overflow:visible;
+  }
+
+  .card,
+  .card *{
+    min-width:0;
+    max-width:100%;
+    box-sizing:border-box;
+  }
+
+  .row{
+    grid-template-columns:1fr;
+    gap:0;
+  }
+
+  .brand{
+    margin-bottom:18px;
+  }
+
+  .mark{
+    width:48px;
+    height:48px;
+    margin-bottom:8px;
+  }
+
+  h1{
+    font-size:23px;
+    line-height:1.2;
+  }
+
+  label{
+    margin:12px 0 6px;
+  }
+
+  input,
+  .button{
+    width:100%;
+    min-width:0;
+    font-size:16px;
+  }
+
+  input{
+    height:48px;
+  }
+
+  .button{
+    height:50px;
+    margin-top:16px;
+  }
+
+  .switch{
+    margin-top:16px;
+  }
+
+  .footer{
+    margin-top:18px;
+    padding-bottom:max(2px,env(safe-area-inset-bottom));
+  }
+}
+
+@media screen and (max-width:420px){
+  .card{
+    width:calc(100% - 18px);
+    margin-top:8px;
+    padding:20px 15px 22px;
+  }
+
+  .mark{
+    width:44px;
+    height:44px;
+  }
+
+  h1{
+    font-size:22px;
+  }
+}
+
+/* ---------- MOBILE APP: SIDEBAR TRÁI ---------- */
+@media screen and (max-width:768px){
+  html,
+  body{
+    width:100%;
+    max-width:100%;
+    overflow-x:hidden;
+  }
+
+  .app-shell.active{
+    flex-direction:row;
+    width:100vw;
+    height:100dvh;
+    min-height:100dvh;
+    overflow:hidden;
+  }
+
+  .sidebar{
+    order:0;
+    flex:0 0 68px;
+    width:68px;
+    min-width:68px;
+    max-width:68px;
+    height:100dvh;
+    min-height:100dvh;
+    display:flex;
+    flex-direction:column;
+    overflow-x:hidden;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+    background:#101d32;
+    z-index:50;
+    transition:
+      width .22s ease,
+      min-width .22s ease,
+      max-width .22s ease,
+      flex-basis .22s ease;
+  }
+
+  .sidebar.is-expanded{
+    flex-basis:248px;
+    width:248px;
+    min-width:248px;
+    max-width:248px;
+  }
+
+  .app-brand{
+    position:relative;
+    flex:0 0 72px;
+    width:100%;
+    height:72px;
+    min-height:72px;
+    padding:14px 8px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    box-sizing:border-box;
+    border-bottom:1px solid #ffffff15;
+  }
+
+  .app-logo{
+    width:42px;
+    height:42px;
+    flex:0 0 42px;
+  }
+
+  .brand-text{
+    display:none;
+    min-width:0;
+  }
+
+  .sidebar.is-expanded .app-brand{
+    justify-content:flex-start;
+    padding:14px 16px;
+  }
+
+  .sidebar.is-expanded .brand-text{
+    display:block;
+  }
+
+  .menu{
+    width:100%;
+    min-height:0;
+    flex:1 1 auto;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:flex-start;
+    gap:5px;
+    padding:12px 8px;
+    overflow:visible;
+    box-sizing:border-box;
+  }
+
+  .menu-item{
+    position:relative;
+    flex:0 0 52px;
+    width:52px;
+    min-width:52px;
+    height:52px;
+    min-height:52px;
+    margin:0;
+    padding:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:0;
+    border-radius:11px;
+    font-size:20px;
+    line-height:1;
+    -webkit-tap-highlight-color:transparent;
+  }
+
+  .menu-item span{
+    display:none;
+  }
+
+  .sidebar.is-expanded .menu{
+    align-items:stretch;
+  }
+
+  .sidebar.is-expanded .menu-item{
+    width:100%;
+    min-width:0;
+    justify-content:flex-start;
+    gap:12px;
+    padding:0 12px;
+    font-size:15px;
+  }
+
+  .sidebar.is-expanded .menu-item span{
+    display:inline;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+
+  .sidebar-bottom{
+    flex:0 0 auto;
+    width:100%;
+    padding:10px 8px max(10px,env(safe-area-inset-bottom));
+    box-sizing:border-box;
+    border-top:1px solid #ffffff15;
+  }
+
+  .user-box{
+    width:100%;
+    min-width:0;
+    justify-content:center;
+    padding:8px 0;
+    margin:0;
+  }
+
+  .avatar{
+    width:40px;
+    height:40px;
+    flex:0 0 40px;
+  }
+
+  .user-info,
+  .user-account-arrow,
+  .logout-button{
+    display:none;
+  }
+
+  .sidebar.is-expanded .user-box{
+    justify-content:flex-start;
+    gap:10px;
+    padding:8px;
+  }
+
+  .sidebar.is-expanded .user-info,
+  .sidebar.is-expanded .user-account-arrow{
+    display:block;
+  }
+
+  .sidebar.is-expanded .logout-button{
+    display:block;
+    margin-top:6px;
+    min-height:42px;
+    width:100%;
+    font-size:14px;
+  }
+
+  .main-area{
+    order:0;
+    flex:1 1 auto;
+    width:auto;
+    max-width:none;
+    min-width:0;
+    height:100dvh;
+    min-height:0;
+    overflow-x:hidden;
+    overflow-y:auto;
+  }
+
+  .topbar{
+    position:sticky;
+    top:0;
+    z-index:20;
+    padding:14px 16px;
+  }
+
+  .topbar h2{
+    font-size:19px;
+    line-height:1.3;
+  }
+
+  .topbar p{
+    font-size:12px;
+    line-height:1.4;
+  }
+
+  .page-content{
+    width:100%;
+    max-width:none;
+    min-width:0;
+    margin:0;
+    padding:16px 14px calc(24px + env(safe-area-inset-bottom));
+  }
+
+  .page-content h2{
+    font-size:22px;
+    line-height:1.35;
+  }
+
+  .page-content p{
+    line-height:1.55;
+  }
+
+  .employee-action-grid,
+  .employee-form-grid,
+  .employee-kpi-grid,
+  .attendance-dashboard-grid,
+  .attendance-form-grid{
+    grid-template-columns:1fr;
+  }
+
+  .employee-module{
+    max-width:none;
+  }
+
+  .employee-module-head h2{
+    font-size:22px;
+  }
+
+  .employee-week-grid{
+    grid-template-columns:repeat(7,minmax(150px,1fr));
+    overflow-x:auto;
+    padding-bottom:4px;
+  }
+
+  .employee-day-card{
+    min-height:180px;
+  }
+
+  .employee-table-wrap,
+  .attendance-table-wrap{
+    max-width:100%;
+    overflow-x:auto;
+  }
+
+  .employee-table{
+    min-width:620px;
+  }
+
+  .attendance-table{
+    min-width:760px;
+  }
+
+  .attendance-manager-dashboard,
+  .attendance-store-grid,
+  .attendance-manager-filter,
+  .attendance-manager-edit-grid{
+    grid-template-columns:1fr;
+  }
+
+  .attendance-filter-title{
+    display:block;
+  }
+
+  .attendance-vn-time{
+    margin-top:8px;
+  }
+
+  .attendance-manager-section{
+    padding:14px;
+  }
+
+  .employee-action-card,
+  .attendance-dashboard-card,
+  .attendance-form-card,
+  .attendance-history-filter-card,
+  .attendance-history-card{
+    border-radius:14px;
+  }
+}
+
+/* Điện thoại rất hẹp */
+@media screen and (max-width:420px){
+  .sidebar.is-expanded{
+    flex-basis:224px;
+    width:224px;
+    min-width:224px;
+    max-width:224px;
+  }
+
+  .topbar{
+    padding:13px 14px;
+  }
+
+  .page-content{
+    padding:14px 12px calc(22px + env(safe-area-inset-bottom));
+  }
+
+  .employee-module-head h2{
+    font-size:21px;
+  }
+
+  .employee-schedule-board{
+    padding:12px;
+  }
+
+  .employee-week-grid{
+    grid-template-columns:repeat(7,minmax(145px,1fr));
+  }
+}
+
+/* ---------- ATTENDANCE TABLE -> MOBILE CARDS ---------- */
+@media screen and (max-width:900px){
+  .attendance-history-card{
+    padding:14px;
+  }
+
+  .attendance-table-wrap{
+    overflow:visible;
+    border:0;
+  }
+
+  .attendance-my-table{
+    display:block;
+    width:100%;
+    min-width:0;
+  }
+
+  .attendance-my-table thead{
+    display:none;
+  }
+
+  .attendance-my-table tbody{
+    display:grid;
+    gap:12px;
+  }
+
+  .attendance-my-table tr{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:0;
+    padding:4px 0;
+    border:1px solid #e4eaf2;
+    border-radius:14px;
+    overflow:hidden;
+    background:#fff;
+  }
+
+  .attendance-my-table td{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+    justify-content:center;
+    min-width:0;
+    padding:10px 11px;
+    border:0;
+    border-bottom:1px solid #eef2f6;
+    text-align:left;
+    font-size:13px;
+    line-height:1.35;
+    overflow-wrap:anywhere;
+  }
+
+  .attendance-my-table td:nth-child(odd){
+    border-right:1px solid #eef2f6;
+  }
+
+  .attendance-my-table td::before{
+    display:block;
+    margin-bottom:4px;
+    color:#78869a;
+    font-size:10px;
+    font-weight:700;
+    letter-spacing:.03em;
+  }
+
+  .attendance-my-table td:nth-child(1)::before{content:"NGÀY LÀM"}
+  .attendance-my-table td:nth-child(2)::before{content:"CHI NHÁNH"}
+  .attendance-my-table td:nth-child(3)::before{content:"CA"}
+  .attendance-my-table td:nth-child(4)::before{content:"GIỜ VÀO"}
+  .attendance-my-table td:nth-child(5)::before{content:"GIỜ RA"}
+  .attendance-my-table td:nth-child(6)::before{content:"GIỜ CÔNG"}
+  .attendance-my-table td:nth-child(7)::before{content:"BẬC NHÂN VIÊN"}
+  .attendance-my-table td:nth-child(8)::before{content:"THÀNH TIỀN"}
+  .attendance-my-table td:nth-child(9)::before{content:"TRẠNG THÁI"}
+  .attendance-my-table td:nth-child(10)::before{content:"THỜI HẠN SỬA"}
+
+  .attendance-my-table td:nth-child(11){
+    grid-column:1 / -1;
+    align-items:stretch;
+    border-bottom:0;
+  }
+
+  .attendance-my-table td:nth-child(11)::before{content:"THAO TÁC"}
+
+  .attendance-edit-btn{
+    width:100%;
+    min-height:42px;
+  }
+
+  .attendance-history-filter-grid{
+    grid-template-columns:1fr;
+  }
+}
+
+/* ---------- TOUCH SAFETY ---------- */
+@media (hover:none) and (pointer:coarse){
+  button,
+  .menu-item,
+  input,
+  select,
+  textarea{
+    -webkit-tap-highlight-color:transparent;
+  }
+}
+
+/* =========================================================
+   MAGASIN V36.1 — DRAWER STACKING / CLICK FIX
+   - app-shell tạo stacking context phía trên backdrop.
+   - Drawer nằm trên backdrop.
+   - Backdrop vẫn phủ main content nhưng không chặn thao tác trong drawer.
+========================================================= */
+.app-shell.active{
+  position:relative!important;
+  z-index:998!important;
+}
+
+/* =========================================================
+   MAGASIN V36 — DRAWER SIDEBAR / PARENT-CHILD NAVIGATION
+   - Mặc định: chỉ hiện hamburger.
+   - Mở: drawer phủ lên nội dung.
+   - Parent có submenu + arrow.
+========================================================= */
+.magasin-drawer{
+  position:fixed!important;
+  left:0!important;
+  top:0!important;
+  bottom:0!important;
+  z-index:1000!important;
+  width:68px!important;
+  min-width:68px!important;
+  max-width:68px!important;
+  height:100dvh!important;
+  flex:0 0 68px!important;
+  overflow:hidden!important;
+  box-shadow:8px 0 28px rgba(7,17,31,.10);
+  transition:width .22s ease,min-width .22s ease,max-width .22s ease,box-shadow .22s ease!important;
+}
+.magasin-drawer.is-expanded{
+  width:min(300px,calc(100vw - 28px))!important;
+  min-width:min(300px,calc(100vw - 28px))!important;
+  max-width:min(300px,calc(100vw - 28px))!important;
+  box-shadow:12px 0 36px rgba(7,17,31,.28);
+}
+.magasin-drawer .app-brand{
+  min-height:72px!important;
+  height:72px!important;
+  padding:12px 10px!important;
+  justify-content:center!important;
+}
+.magasin-drawer:not(.is-expanded) .app-brand{display:none!important}
+.magasin-drawer .brand-text{display:none!important}
+.magasin-drawer.is-expanded .brand-text{display:block!important}
+.magasin-drawer .menu{
+  width:100%!important;
+  padding:12px 8px!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+}
+.magasin-drawer:not(.is-expanded) .menu,
+.magasin-drawer:not(.is-expanded) .sidebar-bottom{
+  display:none!important;
+}
+.magasin-drawer .sidebar-bottom{padding:12px 10px!important}
+.magasin-drawer.is-expanded .sidebar-bottom{display:flex!important}
+
+#sidebarToggle{
+  position:absolute!important;
+  top:14px!important;
+  right:10px!important;
+  z-index:20!important;
+  width:46px!important;
+  height:46px!important;
+  min-width:46px!important;
+  border:0!important;
+  border-radius:12px!important;
+  display:grid!important;
+  place-items:center!important;
+  background:rgba(255,255,255,.08)!important;
+  color:#fff!important;
+  font-size:24px!important;
+  line-height:1!important;
+  cursor:pointer!important;
+}
+.magasin-drawer:not(.is-expanded) #sidebarToggle{
+  right:11px!important;
+  background:transparent!important;
+}
+.magasin-drawer.is-expanded #sidebarToggle{
+  background:rgba(255,255,255,.08)!important;
+}
+
+.magasin-drawer-backdrop{
+  position:fixed;
+  inset:0;
+  z-index:999!important;
+  background:rgba(15,23,42,.48);
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .2s ease;
+}
+.magasin-drawer-backdrop.active{
+  opacity:1;
+  pointer-events:auto;
+}
+
+.magasin-drawer-parent,
+.magasin-drawer-direct,
+.magasin-drawer-child{
+  width:100%!important;
+  min-height:50px!important;
+  margin:0 0 4px!important;
+  border:0!important;
+  border-radius:11px!important;
+  background:transparent!important;
+  color:#d4deec!important;
+  font:500 15px/1.35 'Be Vietnam Pro',Arial,sans-serif!important;
+}
+.magasin-drawer-parent{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  padding:13px 14px!important;
+  cursor:pointer!important;
+  text-align:left!important;
+}
+.magasin-drawer-parent-title{min-width:0}
+.magasin-drawer-parent:hover{background:rgba(255,255,255,.07)!important;color:#fff!important}
+.magasin-drawer-parent.open{color:#fff!important;background:rgba(255,255,255,.05)!important}
+.magasin-drawer-arrow{
+  width:22px;
+  flex:0 0 22px;
+  text-align:center;
+  font-size:22px;
+  line-height:1;
+  transition:transform .18s ease;
+}
+.magasin-drawer-parent.open .magasin-drawer-arrow{transform:rotate(90deg)}
+.magasin-drawer-children{
+  padding:2px 0 6px 14px!important;
+}
+.magasin-drawer-child{
+  display:flex!important;
+  align-items:center!important;
+  gap:12px!important;
+  padding:11px 14px!important;
+  text-align:left!important;
+}
+.magasin-drawer-child .menu-icon,
+.magasin-drawer-direct .menu-icon{
+  width:24px;
+  flex:0 0 24px;
+  text-align:center;
+  font-size:18px;
+}
+.magasin-drawer-child:hover,
+.magasin-drawer-direct:hover{background:rgba(255,255,255,.07)!important;color:#fff!important}
+.magasin-drawer-child.active,
+.magasin-drawer-direct.active{
+  background:#0fbab825!important;
+  color:#69e7e3!important;
+}
+.magasin-drawer-group + .magasin-drawer-group{margin-top:3px}
+.magasin-drawer-direct{display:flex!important;align-items:center!important;gap:12px!important;padding:13px 14px!important;cursor:pointer!important;text-align:left!important}
+
+.magasin-drawer:not(.is-expanded) .app-brand .app-logo{
+  width:42px!important;
+  height:42px!important;
+}
+.magasin-drawer:not(.is-expanded) .sidebar-bottom{display:none!important}
+
+.magasin-drawer.is-expanded + .main-area{
+  position:relative;
+}
+.magasin-drawer-open body{overflow:hidden}
+
+@media (min-width:769px){
+  .app-shell.active .main-area{
+    width:auto!important;
+    margin-left:68px!important;
+  }
+}
+
+@media (max-width:768px){
+  .magasin-drawer{
+    width:64px!important;
+    min-width:64px!important;
+    max-width:64px!important;
+  }
+  .magasin-drawer.is-expanded{
+    width:min(292px,calc(100vw - 18px))!important;
+    min-width:min(292px,calc(100vw - 18px))!important;
+    max-width:min(292px,calc(100vw - 18px))!important;
+  }
+  .app-shell.active .main-area{
+    width:auto!important;
+    margin-left:64px!important;
+  }
+  .magasin-drawer .app-brand{height:66px!important;min-height:66px!important}
+  .magasin-drawer.is-expanded .app-brand{justify-content:flex-start!important;padding-left:12px!important;padding-right:58px!important}
+  .magasin-drawer .menu{padding:12px 10px!important}
+  .magasin-drawer.is-expanded .menu{padding:12px!important}
+  .magasin-drawer-parent,
+  .magasin-drawer-direct,
+  .magasin-drawer-child{min-height:48px!important}
+}
+
+@media (max-width:420px){
+  .magasin-drawer.is-expanded{
+    width:min(278px,calc(100vw - 14px))!important;
+    min-width:min(278px,calc(100vw - 14px))!important;
+    max-width:min(278px,calc(100vw - 14px))!important;
+  }
+}
+
+
+/* =========================================================
+   MAGASIN V36.2 — DRAWER INTERACTION DEFINITIVE FIX
+   ROOT CAUSE:
+   - .magasin-drawer-backdrop trước đó nằm z-index:999
+   - .app-shell.active chỉ z-index:998
+   - Backdrop nằm trên toàn bộ app-shell nên chặn pointer/click
+     của Drawer dù Drawer nhìn thấy được.
+
+   GIẢI PHÁP:
+   - Backdrop DOM trở thành lớp trang trí, KHÔNG nhận pointer.
+   - Overlay tương tác được chuyển vào .main-area::before.
+   - Drawer nằm trong app-shell và luôn ở trên overlay nội dung.
+   - Giữ app-shell fixed; không thay đổi layout shell hiện tại.
+========================================================= */
+
+.app-shell.active{
+  position:fixed!important;
+  inset:0!important;
+  z-index:998!important;
+}
+
+/* Backdrop cũ không được phép bắt sự kiện chuột/touch. */
+.magasin-drawer-backdrop,
+.magasin-drawer-backdrop.active{
+  z-index:997!important;
+  opacity:0!important;
+  visibility:hidden!important;
+  pointer-events:none!important;
+}
+
+/* Drawer luôn nhận toàn bộ pointer/touch event. */
+.magasin-drawer,
+.magasin-drawer *{
+  pointer-events:auto!important;
+}
+
+.magasin-drawer{
+  z-index:1000!important;
+  isolation:auto!important;
+}
+
+/* Overlay thật chỉ nằm trong vùng MAIN, không phủ Sidebar/Drawer. */
+.app-shell.active .main-area{
+  position:relative!important;
+}
+
+.app-shell.active .main-area::before{
+  content:none;
+  position:absolute;
+  inset:0;
+  z-index:500;
+  background:rgba(15,23,42,.48);
+  pointer-events:none;
+}
+
+html.magasin-drawer-open .app-shell.active .main-area::before{
+  content:"";
+  pointer-events:auto;
+  cursor:default;
+}
+
+
+/* Drawer vẫn cao hơn mọi lớp của main-area. */
+html.magasin-drawer-open .magasin-drawer{
+  z-index:1000!important;
+}
+
+/* =========================================================
+   MAGASIN — LỊCH LÀM VIỆC V3.3
+   DÁN PHẦN NÀY Ở CUỐI _styles.html
+   Mục tiêu: ghi đè CSS lịch hiện tại, không đụng Drawer.
+========================================================= */
+
+.schedule-board-v33{
+  overflow:hidden;
+}
+
+.schedule-week-grid-v33{
+  display:grid;
+  grid-template-columns:repeat(7,minmax(150px,1fr));
+  gap:10px;
+  width:100%;
+  overflow-x:auto;
+  padding-bottom:4px;
+}
+
+.schedule-week-grid-v33 .employee-day-card{
+  min-width:150px;
+  min-height:235px;
+  background:#fbfcfe;
+  border:1px solid #dfe7ef;
+  border-radius:16px;
+  padding:12px;
+}
+
+.schedule-week-grid-v33 .employee-day-card.today{
+  border-color:#18b5bd;
+  box-shadow:0 0 0 2px rgba(24,181,189,.10);
+}
+
+.schedule-week-grid-v33 .employee-day-head{
+  padding-bottom:10px;
+  margin-bottom:10px;
+  border-bottom:1px solid #e9eef3;
+}
+
+.schedule-week-grid-v33 .employee-day-head strong{
+  color:#1f3047;
+  font-size:14px;
+}
+
+.schedule-week-grid-v33 .employee-day-head span{
+  color:#7b899b;
+  font-size:12px;
+}
+
+.schedule-week-grid-v33 .employee-day-shifts{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.schedule-week-grid-v33 .employee-shift-chip{
+  min-height:78px;
+  padding:10px 11px;
+  border-radius:12px;
+  border:1px solid transparent;
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  box-sizing:border-box;
+}
+
+.schedule-week-grid-v33 .employee-shift-chip strong{
+  color:#1f3047;
+  font-size:13px;
+  font-weight:800;
+}
+
+.schedule-week-grid-v33 .employee-shift-time{
+  color:#42556d;
+  font-size:11px;
+}
+
+.schedule-week-grid-v33 .employee-shift-store{
+  color:#5f7187;
+  font-size:11px;
+}
+
+.schedule-week-grid-v33 .employee-shift-status{
+  align-self:flex-start;
+  margin-top:2px;
+  padding:3px 7px;
+  border-radius:999px;
+  background:rgba(255,255,255,.72);
+  color:#41546b;
+  font-size:10px;
+  font-weight:800;
+}
+
+.schedule-week-grid-v33 .employee-shift-origin{
+  align-self:flex-start;
+  margin-top:2px;
+  padding:3px 7px;
+  border-radius:999px;
+  background:rgba(255,255,255,.82);
+  color:#52657b;
+  font-size:9px;
+  font-weight:700;
+}
+
+/* 05:00–12:00 — Xanh dương */
+.schedule-week-grid-v33 .employee-shift-chip.shift-morning{
+  background:#dceeff;
+  border-color:#91c9f5;
+}
+
+/* 12:00–17:00 — Đỏ */
+.schedule-week-grid-v33 .employee-shift-chip.shift-afternoon{
+  background:#ffe0df;
+  border-color:#f2a4a0;
+}
+
+/* 17:00–22:00 — Xanh dương pastel */
+.schedule-week-grid-v33 .employee-shift-chip.shift-evening{
+  background:#dff4f6;
+  border-color:#9dd8de;
+}
+
+/* Ngoài khung chuẩn */
+.schedule-week-grid-v33 .employee-shift-chip.shift-other{
+  background:#eef2f6;
+  border-color:#d4dde7;
+}
+
+/* Trạng thái */
+.schedule-week-grid-v33 .employee-shift-chip.pending{
+  border-style:dashed;
+  opacity:.9;
+}
+
+.schedule-week-grid-v33 .employee-shift-chip.cancelled{
+  opacity:.55;
+  filter:grayscale(.25);
+}
+
+.schedule-legend-v33{
+  display:flex;
+  flex-wrap:wrap;
+  gap:12px 18px;
+  margin:-4px 0 14px;
+  color:#607086;
+  font-size:11px;
+  font-weight:700;
+}
+
+.schedule-legend-v33 span{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+}
+
+.schedule-legend-dot{
+  width:10px;
+  height:10px;
+  display:inline-block;
+  border-radius:50%;
+  border:1px solid rgba(0,0,0,.08);
+}
+
+.schedule-legend-dot.morning{background:#dceeff}
+.schedule-legend-dot.afternoon{background:#ffe0df}
+.schedule-legend-dot.evening{background:#dff4f6}
+
+.schedule-register-card-v33{
+  margin-bottom:16px;
+}
+
+.employee-module-subhead-v33{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:14px;
+  margin-bottom:15px;
+}
+
+.employee-module-subhead-v33 h3{
+  margin:0 0 5px;
+  color:#22344d;
+  font-size:18px;
+}
+
+.employee-module-subhead-v33 p{
+  margin:0;
+  color:#77869a;
+  font-size:12px;
+}
+
+.schedule-form-grid-v33{
+  grid-template-columns:repeat(4,minmax(0,1fr));
+}
+
+.schedule-form-grid-v33 select,
+.schedule-form-grid-v33 input{
+  min-height:48px;
+  font-weight:600;
+}
+
+.schedule-time-note-v33{
+  margin-top:10px;
+  color:#77869a;
+  font-size:11px;
+}
+
+.schedule-history-board-v33{
+  margin-bottom:0;
+}
+
+@media(max-width:1100px){
+  .schedule-form-grid-v33{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+
+  .schedule-week-grid-v33{
+    grid-template-columns:repeat(7,minmax(150px,1fr));
+  }
+}
+
+@media(max-width:700px){
+  .schedule-form-grid-v33{
+    grid-template-columns:1fr;
+  }
+
+  .schedule-week-grid-v33{
+    grid-template-columns:repeat(7,minmax(145px,1fr));
+    overflow-x:auto;
+  }
+
+  .schedule-week-grid-v33 .employee-day-card{
+    min-width:145px;
+    min-height:210px;
+  }
+
+  .schedule-legend-v33{
+    gap:8px 12px;
+    font-size:10px;
+  }
+
+  .schedule-register-card-v33{
+    padding:15px;
+  }
+}
+
+
+/* =========================================================
+   QUẢN LÝ LỊCH LÀM V3.3
+========================================================= */
+
+.management-module-switch-v33{
+  display:flex;
+  justify-content:flex-end;
+  margin:-6px 0 14px;
+}
+
+.management-switch-btn-v33{
+  min-height:40px;
+  padding:0 14px;
+  border:1px solid #cfe3e7;
+  border-radius:10px;
+  background:#f3fbfc;
+  color:#0e7e86;
+  cursor:pointer;
+  font-weight:700;
+}
+
+.schedule-management-page-v33{
+  max-width:1600px;
+}
+
+.schedule-management-v33{
+  display:grid;
+  gap:16px;
+}
+
+.schedule-management-head-v33{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:14px;
+  flex-wrap:wrap;
+}
+
+.schedule-management-head-v33 h2{
+  margin:0;
+  color:#243248;
+}
+
+.schedule-management-head-v33 p{
+  margin:6px 0 0;
+  color:#778197;
+  font-size:13px;
+}
+
+.schedule-manager-filter-v33{
+  display:grid;
+  grid-template-columns:1fr 1fr minmax(190px,.8fr) auto;
+  gap:12px;
+  align-items:end;
+  padding:16px;
+  background:#fff;
+  border:1px solid #e1e7ef;
+  border-radius:16px;
+}
+
+.schedule-manager-filter-v33 label{
+  margin:0;
+  color:#475569;
+  font-size:12px;
+  font-weight:700;
+}
+
+.schedule-manager-filter-v33 input,
+.schedule-manager-filter-v33 select{
+  display:block;
+  width:100%;
+  min-height:44px;
+  margin-top:6px;
+  padding:9px 11px;
+  border:1px solid #d7e0ea;
+  border-radius:10px;
+  background:#fff;
+  color:#1e293b;
+  font:inherit;
+}
+
+.schedule-manager-board-v33{
+  margin-bottom:0;
+}
+
+.schedule-manager-action-grid-v33{
+  align-items:start;
+}
+
+.schedule-manager-form-v33{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+}
+
+.schedule-pending-list-v33{
+  display:grid;
+  gap:10px;
+}
+
+.schedule-pending-card-v33{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  padding:12px;
+  border:1px solid #e3e9ef;
+  border-radius:12px;
+  background:#fbfcfe;
+}
+
+.schedule-pending-card-v33 strong,
+.schedule-pending-card-v33 span{
+  display:block;
+}
+
+.schedule-pending-card-v33 strong{
+  color:#243248;
+  font-size:13px;
+}
+
+.schedule-pending-card-v33 span{
+  margin-top:4px;
+  color:#718096;
+  font-size:11px;
+}
+
+@media(max-width:900px){
+  .schedule-manager-filter-v33{
+    grid-template-columns:1fr 1fr;
+  }
+
+  .schedule-manager-form-v33{
+    grid-template-columns:1fr;
+  }
+}
+
+@media(max-width:560px){
+  .schedule-manager-filter-v33{
+    grid-template-columns:1fr;
+  }
+
+  .schedule-pending-card-v33{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+
+  .management-module-switch-v33{
+    justify-content:stretch;
+  }
+
+  .management-switch-btn-v33{
+    width:100%;
+  }
+}
+
+
+
+
+/* =========================================================
+   MAGASIN — LỊCH LÀM VIỆC V3.4
+   - Lịch tuần hiện tại = lịch chính thức, chỉ hiển thị APPROVED.
+   - Ô ca chính thức chỉ hiển thị khung giờ.
+   - Đăng ký và lịch đăng ký dùng cho tuần kế tiếp.
+   ========================================================= */
+.schedule-board-note-v34{
+  margin:6px 0 0;
+  color:#8a97a8;
+  font-size:11px;
+}
+
+.schedule-register-week-banner-v34{
+  margin:0 0 14px;
+  padding:11px 13px;
+  border:1px solid #dcebed;
+  border-radius:11px;
+  background:#f2fbfc;
+  color:#0c7c83;
+  font-size:12px;
+  font-weight:700;
+}
+
+.schedule-official-board-v34 .employee-shift-chip{
+  min-height:62px;
+  align-items:center;
+  justify-content:center;
+  padding:10px 8px;
+}
+
+.schedule-official-board-v34 .employee-shift-chip strong{
+  font-size:17px;
+  letter-spacing:.2px;
+  white-space:nowrap;
+}
+
+.schedule-official-board-v34 .employee-day-card{
+  min-height:255px;
+}
+
+.schedule-registration-board-v34 .employee-day-card{
+  min-height:230px;
+}
+
+.schedule-registration-board-v34 .employee-shift-chip{
+  min-height:72px;
+}
+
+.schedule-registration-board-v34 .employee-shift-status,
+.schedule-registration-board-v34 .employee-shift-origin{
+  font-size:10px;
+}
+
+.schedule-form-grid-v34 input[type="date"]{
+  color-scheme:light;
+}
+
+@media(max-width:700px){
+  .schedule-official-board-v34 .employee-day-card{
+    min-height:220px;
+  }
+
+  .schedule-official-board-v34 .employee-shift-chip strong{
+    font-size:15px;
+  }
+}
+
+/* =========================================================
+   MAGASIN V37 — TOPBAR + LEFT DRAWER FINAL RESPONSIVE
+   Header luôn nằm trên cùng; hamburger nằm cùng hàng với tiêu đề.
+   Drawer trượt từ trái, bắt đầu bên dưới header.
+   Overlay chỉ phủ vùng nội dung, không chặn header/drawer.
+========================================================= */
+:root{
+  --magasin-topbar-h:72px;
+  --magasin-drawer-w:320px;
+  --magasin-drawer-w-mobile:min(84vw,340px);
+}
+
+.app-shell.active{
+  position:fixed!important;
+  inset:0!important;
+  width:100vw!important;
+  height:100dvh!important;
+  min-height:100dvh!important;
+  display:block!important;
+  overflow:hidden!important;
+}
+
+.app-shell.active .main-area{
+  position:absolute!important;
+  inset:0!important;
+  width:100%!important;
+  max-width:none!important;
+  margin:0!important;
+  min-width:0!important;
+  height:100dvh!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  background:#f5f7fb!important;
+}
+
+.magasin-topbar{
+  position:sticky!important;
+  top:0!important;
+  z-index:1200!important;
+  width:100%!important;
+  min-height:var(--magasin-topbar-h)!important;
+  height:var(--magasin-topbar-h)!important;
+  padding:0 28px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:16px!important;
+  background:#fff!important;
+  border-bottom:1px solid #e7ebf2!important;
+  box-shadow:0 1px 0 rgba(15,23,42,.02)!important;
+}
+
+.topbar-leading{
+  min-width:0;
+  display:flex;
+  align-items:center;
+  gap:14px;
+}
+.topbar-title-block{min-width:0}
+.magasin-topbar h2{
+  margin:0!important;
+  color:#172033!important;
+  font-size:22px!important;
+  line-height:1.2!important;
+  font-weight:700!important;
+}
+.magasin-topbar p{
+  margin:4px 0 0!important;
+  color:#778197!important;
+  font-size:13px!important;
+  line-height:1.3!important;
+}
+
+.header-menu-toggle{
+  width:44px!important;
+  height:44px!important;
+  flex:0 0 44px!important;
+  padding:10px!important;
+  display:flex!important;
+  flex-direction:column!important;
+  justify-content:center!important;
+  gap:5px!important;
+  border:0!important;
+  border-radius:11px!important;
+  background:#f1f5f9!important;
+  color:#172033!important;
+  cursor:pointer!important;
+  -webkit-tap-highlight-color:transparent!important;
+}
+.header-menu-toggle span{
+  display:block!important;
+  width:22px!important;
+  height:2.5px!important;
+  margin:0 auto!important;
+  border-radius:999px!important;
+  background:#172033!important;
+  transition:transform .18s ease,opacity .18s ease!important;
+}
+.header-menu-toggle:hover{background:#e8eef5!important}
+.header-menu-toggle:active{transform:scale(.97)!important}
+.header-menu-toggle:focus-visible{outline:2px solid #1ac6c4!important;outline-offset:2px!important}
+.header-menu-toggle.is-open span:nth-child(1){transform:translateY(7.5px) rotate(45deg)!important}
+.header-menu-toggle.is-open span:nth-child(2){opacity:0!important}
+.header-menu-toggle.is-open span:nth-child(3){transform:translateY(-7.5px) rotate(-45deg)!important}
+.topbar-actions{display:flex;align-items:center;gap:10px;min-width:44px}
+.topbar-user-dot{width:36px;height:36px;border-radius:50%;background:#18c8c7;opacity:.95}
+
+/* Legacy sidebar toggle is kept only for backward compatibility. */
+#sidebarToggle{display:none!important;pointer-events:none!important}
+
+/* Drawer itself is a sibling visual layer inside app-shell. */
+.app-shell.active .sidebar.magasin-drawer{
+  position:fixed!important;
+  left:0!important;
+  top:var(--magasin-topbar-h)!important;
+  bottom:0!important;
+  z-index:1100!important;
+  width:var(--magasin-drawer-w)!important;
+  min-width:var(--magasin-drawer-w)!important;
+  max-width:var(--magasin-drawer-w)!important;
+  height:calc(100dvh - var(--magasin-topbar-h))!important;
+  min-height:0!important;
+  margin:0!important;
+  padding:0!important;
+  display:flex!important;
+  flex-direction:column!important;
+  background:#101d32!important;
+  color:#fff!important;
+  overflow:hidden!important;
+  box-shadow:18px 0 42px rgba(7,17,31,.25)!important;
+  transform:translate3d(-102%,0,0)!important;
+  transition:transform .24s cubic-bezier(.22,.61,.36,1)!important;
+}
+.app-shell.active .sidebar.magasin-drawer.is-expanded{
+  transform:translate3d(0,0,0)!important;
+}
+
+.app-shell.active .sidebar.magasin-drawer .app-brand{
+  flex:0 0 72px!important;
+  height:72px!important;
+  min-height:72px!important;
+  width:100%!important;
+  margin:0!important;
+  padding:12px 18px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  gap:12px!important;
+  border-bottom:1px solid rgba(255,255,255,.08)!important;
+  background:#101d32!important;
+}
+.app-shell.active .sidebar.magasin-drawer .brand-text{display:block!important}
+.app-shell.active .sidebar.magasin-drawer .menu{
+  flex:1 1 auto!important;
+  width:100%!important;
+  min-width:0!important;
+  padding:16px 12px!important;
+  overflow-x:hidden!important;
+  overflow-y:auto!important;
+  background:#101d32!important;
+}
+.app-shell.active .sidebar.magasin-drawer .sidebar-bottom{
+  flex:0 0 auto!important;
+  width:100%!important;
+  display:flex!important;
+  align-items:center!important;
+  gap:8px!important;
+  padding:12px 12px calc(12px + env(safe-area-inset-bottom))!important;
+  border-top:1px solid rgba(255,255,255,.08)!important;
+  background:#101d32!important;
+}
+.app-shell.active .sidebar.magasin-drawer:not(.is-expanded) .menu,
+.app-shell.active .sidebar.magasin-drawer:not(.is-expanded) .sidebar-bottom,
+.app-shell.active .sidebar.magasin-drawer:not(.is-expanded) .app-brand{visibility:hidden!important}
+
+/* Overlay: chỉ từ dưới header. */
+.magasin-drawer-overlay{
+  position:fixed!important;
+  top:var(--magasin-topbar-h)!important;
+  left:0!important;
+  right:0!important;
+  bottom:0!important;
+  z-index:1050!important;
+  background:rgba(15,23,42,.48)!important;
+  opacity:0!important;
+  visibility:hidden!important;
+  pointer-events:none!important;
+  transition:opacity .22s ease,visibility .22s ease!important;
+}
+.magasin-drawer-overlay.active{
+  opacity:1!important;
+  visibility:visible!important;
+  pointer-events:auto!important;
+}
+
+/* Menu hierarchy */
+.app-shell.active .magasin-drawer-parent,
+.app-shell.active .magasin-drawer-direct,
+.app-shell.active .magasin-drawer-child{
+  width:100%!important;
+  min-height:50px!important;
+  margin:0 0 4px!important;
+  border:0!important;
+  border-radius:12px!important;
+  background:transparent!important;
+  color:#dbe5f1!important;
+  font:500 15px/1.35 'Be Vietnam Pro',Arial,sans-serif!important;
+  cursor:pointer!important;
+}
+.app-shell.active .magasin-drawer-parent{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  padding:13px 14px!important;
+  text-align:left!important;
+}
+.app-shell.active .magasin-drawer-parent:hover,
+.app-shell.active .magasin-drawer-direct:hover,
+.app-shell.active .magasin-drawer-child:hover{
+  background:rgba(255,255,255,.07)!important;
+  color:#fff!important;
+}
+.app-shell.active .magasin-drawer-parent.open{
+  background:rgba(255,255,255,.05)!important;
+  color:#fff!important;
+}
+.app-shell.active .magasin-drawer-arrow{
+  width:22px!important;
+  flex:0 0 22px!important;
+  text-align:center!important;
+  font-size:22px!important;
+  line-height:1!important;
+  transition:transform .18s ease!important;
+}
+.app-shell.active .magasin-drawer-parent.open .magasin-drawer-arrow{transform:rotate(90deg)!important}
+.app-shell.active .magasin-drawer-children{
+  padding:2px 0 7px 12px!important;
+}
+.app-shell.active .magasin-drawer-child,
+.app-shell.active .magasin-drawer-direct{
+  display:flex!important;
+  align-items:center!important;
+  gap:12px!important;
+  padding:11px 14px!important;
+  text-align:left!important;
+}
+.app-shell.active .magasin-drawer-child .menu-icon,
+.app-shell.active .magasin-drawer-direct .menu-icon{
+  width:24px!important;
+  min-width:24px!important;
+  flex:0 0 24px!important;
+  text-align:center!important;
+  font-size:18px!important;
+}
+.app-shell.active .magasin-drawer-child.active,
+.app-shell.active .magasin-drawer-direct.active{
+  background:#0fbab825!important;
+  color:#69e7e3!important;
+}
+
+/* Header + drawer keep main page width intact. */
+.app-shell.active.drawer-open .main-area{overflow:hidden!important}
+.app-shell.active.drawer-open .page-content{filter:none!important}
+
+/* Desktop: make title/header feel like a POS back-office shell. */
+@media (min-width:769px){
+  .magasin-topbar{padding:0 32px!important}
+  .magasin-topbar .topbar-user-dot{display:block!important}
+  .page-content{padding:32px 36px!important}
+}
+
+/* Mobile: Sapo-like header; drawer uses most of viewport but keeps header visible. */
+@media (max-width:768px){
+  :root{--magasin-topbar-h:64px;--magasin-drawer-w-mobile:min(84vw,340px)}
+  .magasin-topbar{
+    min-height:64px!important;
+    height:64px!important;
+    padding:0 14px!important;
+    gap:10px!important;
+  }
+  .magasin-topbar h2{font-size:18px!important}
+  .magasin-topbar p{font-size:11px!important;margin-top:3px!important}
+  .header-menu-toggle{width:42px!important;height:42px!important;flex-basis:42px!important}
+  .topbar-user-dot{width:34px!important;height:34px!important}
+
+  .app-shell.active .sidebar.magasin-drawer{
+    top:64px!important;
+    width:var(--magasin-drawer-w-mobile)!important;
+    min-width:var(--magasin-drawer-w-mobile)!important;
+    max-width:var(--magasin-drawer-w-mobile)!important;
+    height:calc(100dvh - 64px)!important;
+  }
+  .magasin-drawer-overlay{top:64px!important}
+  .app-shell.active .sidebar.magasin-drawer .app-brand{height:66px!important;min-height:66px!important;flex-basis:66px!important;padding:10px 16px!important}
+  .app-shell.active .sidebar.magasin-drawer .menu{padding:12px 10px!important}
+  .app-shell.active .sidebar.magasin-drawer .sidebar-bottom{padding:10px 10px calc(10px + env(safe-area-inset-bottom))!important}
+  .page-content{padding:18px 14px!important}
+}
+
+@media (max-width:420px){
+  .magasin-topbar{padding:0 10px!important}
+  .topbar-leading{gap:9px!important}
+  .topbar-actions{min-width:38px!important}
+  .app-shell.active .sidebar.magasin-drawer{width:min(88vw,320px)!important;min-width:min(88vw,320px)!important;max-width:min(88vw,320px)!important}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .app-shell.active .sidebar.magasin-drawer,
+  .magasin-drawer-overlay,
+  .header-menu-toggle span{transition:none!important}
+}

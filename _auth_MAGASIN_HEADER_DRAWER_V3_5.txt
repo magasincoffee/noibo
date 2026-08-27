@@ -1,0 +1,1435 @@
+(function(){
+  function syncMagasinMobileLayout(){
+    const physicalWidth=Math.min(
+      Number(window.screen&&window.screen.width)||Infinity,
+      Number(window.innerWidth)||Infinity
+    );
+    document.documentElement.classList.toggle(
+      'magasin-mobile',
+      physicalWidth<=768
+    );
+  }
+
+  syncMagasinMobileLayout();
+  window.addEventListener('resize',syncMagasinMobileLayout);
+  window.addEventListener('orientationchange',function(){
+    setTimeout(syncMagasinMobileLayout,100);
+  });
+})();
+
+const msg=document.getElementById('message');
+let pendingEmail='';
+const resetToken=new URLSearchParams(window.location.search).get('reset')||'';
+let currentUser=null;
+let currentSessionToken='';
+
+/* =========================================================
+   MAGASIN — QUẢN LÝ TRẠNG THÁI ỨNG DỤNG
+   TECH-03: session token không còn nằm trong localStorage.
+
+   Lưu phiên, trang hiện tại và trạng thái giao diện an toàn.
+   Không lưu mật khẩu hoặc dữ liệu nhạy cảm của biểu mẫu.
+========================================================= */
+const MAGASIN_STORAGE_KEYS={
+  sessionToken:'magasin_session_token',
+  currentPage:'magasin_current_page',
+  pageState:'magasin_page_state'
+};
+
+let magasinCurrentPageKey='dashboard';
+let magasinCurrentStaffTask='';
+let magasinPageStateSaveTimer=null;
+
+function magasinStorageGet_(key){
+  // UI/page state vẫn dùng localStorage để giữ trạng thái khi reload.
+  try{
+    return window.localStorage.getItem(key);
+  }catch(err){
+    return null;
+  }
+}
+
+function magasinStorageSet_(key,value){
+  try{
+    window.localStorage.setItem(key,value);
+    return true;
+  }catch(err){
+    return false;
+  }
+}
+
+function magasinStorageRemove_(key){
+  try{
+    window.localStorage.removeItem(key);
+  }catch(err){}
+}
+
+/*
+ * TECH-03:
+ * - Session token dùng sessionStorage: sống trong tab hiện tại và vẫn giữ
+ *   sau F5/reload, nhưng bị xóa khi đóng tab.
+ * - currentPage/pageState vẫn dùng localStorage để giữ UX hiện tại.
+ * - Có migration một lần từ localStorage cũ sang sessionStorage.
+ */
+function magasinSessionTokenGet_(){
+  try{
+    const current=window.sessionStorage.getItem(MAGASIN_STORAGE_KEYS.sessionToken);
+    if(current) return current;
+
+    const legacy=window.localStorage.getItem(MAGASIN_STORAGE_KEYS.sessionToken);
+
+    if(legacy){
+      try{
+        window.sessionStorage.setItem(
+          MAGASIN_STORAGE_KEYS.sessionToken,
+          legacy
+        );
+        window.localStorage.removeItem(
+          MAGASIN_STORAGE_KEYS.sessionToken
+        );
+      }catch(err){}
+
+      return legacy;
+    }
+  }catch(err){}
+
+  return null;
+}
+
+function magasinSessionTokenSet_(token){
+  try{
+    if(token){
+      window.sessionStorage.setItem(
+        MAGASIN_STORAGE_KEYS.sessionToken,
+        String(token)
+      );
+      // Không để session token tồn tại trong localStorage.
+      try{
+        window.localStorage.removeItem(
+          MAGASIN_STORAGE_KEYS.sessionToken
+        );
+      }catch(err){}
+      return true;
+    }
+  }catch(err){}
+
+  return false;
+}
+
+function magasinSessionTokenRemove_(){
+  try{
+    window.sessionStorage.removeItem(
+      MAGASIN_STORAGE_KEYS.sessionToken
+    );
+  }catch(err){}
+
+  // Dọn token cũ còn sót từ phiên bản trước.
+  try{
+    window.localStorage.removeItem(
+      MAGASIN_STORAGE_KEYS.sessionToken
+    );
+  }catch(err){}
+}
+
+function saveMagasinSessionToken_(token){
+  if(token) magasinSessionTokenSet_(token);
+}
+
+function clearMagasinSessionStorage_(){
+  magasinSessionTokenRemove_();
+  magasinStorageRemove_(MAGASIN_STORAGE_KEYS.currentPage);
+  magasinStorageRemove_(MAGASIN_STORAGE_KEYS.pageState);
+}
+
+function safeStateFieldValue_(id){
+  const el=document.getElementById(id);
+  if(!el) return null;
+  if(el.type==='password') return null;
+  return el.value==null?'':String(el.value);
+}
+
+function collectMagasinPageState_(){
+  const fields={};
+  [
+    'attendanceDate',
+    'attendanceStore',
+    'attendanceCheckInTime',
+    'attendanceCheckOutTime',
+    'attendanceHistoryStart',
+    'attendanceHistoryEnd',
+    'managerAttendanceStart',
+    'managerAttendanceEnd',
+    'managerAttendanceStore',
+    'shiftDate',
+    'shiftName',
+    'shiftStart',
+    'shiftEnd',
+    'shiftStore'
+  ].forEach(function(id){
+    const value=safeStateFieldValue_(id);
+    if(value!==null) fields[id]=value;
+  });
+
+  const mainArea=document.querySelector('.main-area');
+
+  return {
+    version:1,
+    page:magasinCurrentPageKey||'dashboard',
+    staffTask:magasinCurrentStaffTask||'',
+    fields:fields,
+    scrollTop:mainArea?Number(mainArea.scrollTop||0):0,
+    savedAt:new Date().toISOString()
+  };
+}
+
+function persistMagasinPageState_(){
+  const state=collectMagasinPageState_();
+  magasinStorageSet_(MAGASIN_STORAGE_KEYS.currentPage,state.page);
+  magasinStorageSet_(MAGASIN_STORAGE_KEYS.pageState,JSON.stringify(state));
+}
+
+function schedulePersistMagasinPageState_(){
+  if(magasinPageStateSaveTimer) clearTimeout(magasinPageStateSaveTimer);
+  magasinPageStateSaveTimer=setTimeout(function(){
+    persistMagasinPageState_();
+    magasinPageStateSaveTimer=null;
+  },120);
+}
+
+function readMagasinSavedPageState_(){
+  const currentPage=magasinStorageGet_(MAGASIN_STORAGE_KEYS.currentPage)||'dashboard';
+  let state=null;
+  const raw=magasinStorageGet_(MAGASIN_STORAGE_KEYS.pageState);
+
+  if(raw){
+    try{ state=JSON.parse(raw); }catch(err){ state=null; }
+  }
+
+  if(!state || typeof state!=='object') state={version:1};
+  state.page=currentPage||state.page||'dashboard';
+  state.staffTask=state.staffTask||'';
+  state.fields=state.fields||{};
+  state.scrollTop=Number(state.scrollTop||0);
+  return state;
+}
+
+function applyMagasinSavedFields_(state){
+  const fields=(state&&state.fields)||{};
+  Object.keys(fields).forEach(function(id){
+    const el=document.getElementById(id);
+    if(!el || el.type==='password') return;
+
+    const value=fields[id];
+    if(value==null) return;
+
+    if(el.tagName==='SELECT'){
+      const exists=[...el.options].some(function(o){return o.value===String(value);});
+      if(exists) el.value=String(value);
+    }else{
+      el.value=String(value);
+    }
+  });
+}
+
+function restoreMagasinSavedState_(){
+  const state=readMagasinSavedPageState_();
+  const page=String(state.page||'dashboard');
+
+  magasinCurrentPageKey='dashboard';
+  magasinCurrentStaffTask='';
+
+  if(page.indexOf('staff:')===0){
+    const task=page.slice('staff:'.length)||state.staffTask;
+    magasinCurrentPageKey=page;
+    magasinCurrentStaffTask=task;
+
+    if(typeof renderStaffTaskPlaceholder_==='function'){
+      renderStaffTaskPlaceholder_(task);
+    }
+  }else{
+    magasinCurrentPageKey=page;
+    if(typeof showPage==='function'){
+      showPage(page);
+    }
+  }
+
+  /* Nội dung module được render đồng bộ trước khi callback này chạy.
+     Khôi phục form/scroll ở tick tiếp theo để tránh race với DOM động. */
+  setTimeout(function(){
+    applyMagasinSavedFields_(state);
+
+    if(page==='attendance' && typeof loadAttendanceManagement_==='function'){
+      const role=normalizedClientRole(currentUser&&currentUser.role);
+      if(role==='OWNER'||role==='STORE_MANAGER') loadAttendanceManagement_();
+    }
+
+    if(page==='staff:attendance' && typeof loadAttendanceHistory_==='function'){
+      loadAttendanceHistory_();
+    }
+
+    const mainArea=document.querySelector('.main-area');
+    if(mainArea && Number.isFinite(state.scrollTop)){
+      mainArea.scrollTop=state.scrollTop;
+    }
+  },80);
+}
+
+function restoreMagasinSession_(){
+  const token=magasinSessionTokenGet_();
+  if(!token || resetToken) return;
+
+  if(!(window.google&&google.script&&google.script.run)){
+    return;
+  }
+
+  google.script.run
+    .withSuccessHandler(function(r){
+      if(!r || !r.ok || !r.user){
+        clearMagasinSessionStorage_();
+        return;
+      }
+
+      saveMagasinSessionToken_(token);
+      openApp(r.user,token);
+    })
+    .withFailureHandler(function(){
+      /* Không xóa token ngay khi lỗi mạng tạm thời.
+         Người dùng có thể tải lại/tiếp tục khi kết nối ổn định. */
+    })
+    .getSession(token);
+}
+
+function installMagasinPersistenceListeners_(){
+  document.addEventListener('input',function(){
+    if(currentSessionToken) schedulePersistMagasinPageState_();
+  });
+
+  document.addEventListener('change',function(){
+    if(currentSessionToken) schedulePersistMagasinPageState_();
+  });
+
+  window.addEventListener('beforeunload',function(){
+    if(currentSessionToken) persistMagasinPageState_();
+  });
+
+  document.addEventListener('visibilitychange',function(){
+    if(document.visibilityState==='hidden' && currentSessionToken){
+      persistMagasinPageState_();
+    }
+  });
+}
+
+
+function view(name){
+  document.querySelectorAll('.view').forEach(x=>x.classList.toggle('active',x.id===name));
+  msg.style.color='';
+  msg.textContent='';
+}
+
+function state(btn,on,text){
+  btn.disabled=on;
+  btn.textContent=on?'Đang xử lý…':text;
+}
+
+document.querySelectorAll('[data-view]').forEach(a=>a.onclick=e=>{
+  e.preventDefault();
+  view(a.dataset.view);
+});
+
+function call(method,data,ok,btn,text){
+  state(btn,true,text);
+  google.script.run
+    .withSuccessHandler(r=>{
+      state(btn,false,text);
+      msg.textContent=r.message||'';
+      if(r.ok) ok(r);
+    })
+    .withFailureHandler(()=>{
+      state(btn,false,text);
+      msg.textContent='Có lỗi kết nối. Vui lòng thử lại.';
+    })[method](data);
+}
+
+/* Nếu người dùng mở link reset từ email */
+if(resetToken){
+  view('reset');
+}
+
+document.getElementById('loginForm').onsubmit=e=>{
+  e.preventDefault();
+  const f=e.target;
+  call('login',
+    {username:f.username.value,password:f.password.value},
+    r=>{if(r.ok){openApp(r.user,r.sessionToken)}},
+    f.querySelector('button[type="submit"]'),'Đăng nhập'
+  );
+};
+
+document.getElementById('registerForm').onsubmit=e=>{
+  e.preventDefault();
+  const f=e.target;
+  call('registerUser',
+    {fullName:f.fullName.value,phone:f.phone.value,email:f.email.value,username:f.username.value,password:f.password.value},
+    r=>{
+      pendingEmail=r.email;
+      document.getElementById('verifyEmail').textContent=pendingEmail;
+      view('verify');
+      msg.textContent=r.message;
+    },
+    f.querySelector('button[type="submit"]'),'Gửi mã xác thực'
+  );
+};
+
+document.getElementById('verifyForm').onsubmit=e=>{
+  e.preventDefault();
+  const f=e.target;
+  call('verifyEmail',
+    {email:pendingEmail,code:f.code.value},
+    r=>{
+      view('login');
+      document.getElementById('loginForm').username.value='';
+      msg.style.color='#8cf0c9';
+      msg.textContent=r.message;
+    },
+    f.querySelector('button[type="submit"]'),'Xác thực email'
+  );
+};
+
+/* Quên mật khẩu: tìm bằng email đã đăng ký */
+document.getElementById('forgotForm').onsubmit=e=>{
+  e.preventDefault();
+  const f=e.target;
+  call('requestPasswordReset',
+    {email:f.email.value},
+    r=>{
+      f.reset();
+      msg.style.color='#8cf0c9';
+    },
+    f.querySelector('button[type="submit"]'),'Gửi hướng dẫn'
+  );
+};
+
+/* Tạo mật khẩu mới + nhập lại để xác nhận */
+document.getElementById('resetForm').onsubmit=e=>{
+  e.preventDefault();
+  const f=e.target;
+  if(!resetToken){
+    msg.textContent='Link tạo mật khẩu mới không hợp lệ.';
+    return;
+  }
+  if(f.password.value!==f.confirmPassword.value){
+    msg.textContent='Mật khẩu nhập lại chưa trùng khớp.';
+    return;
+  }
+  call('resetPassword',
+    {token:resetToken,password:f.password.value,confirmPassword:f.confirmPassword.value},
+    r=>{
+      f.reset();
+      history.replaceState({},document.title,window.location.pathname);
+      view('login');
+      msg.style.color='#8cf0c9';
+      msg.textContent='Tạo mật khẩu mới thành công. Bạn có thể đăng nhập.';
+    },
+    f.querySelector('button[type="submit"]'),'Tạo mật khẩu mới'
+  );
+};
+
+function openApp(user,sessionToken){
+  currentUser=user||null;
+  currentSessionToken=sessionToken||'';
+  if(currentSessionToken) saveMagasinSessionToken_(currentSessionToken);
+  document.querySelector('.card').style.display='none';
+  document.getElementById('app').classList.add('active');
+  refreshUserHeader();
+  magasinCurrentPageKey='dashboard';
+  magasinCurrentStaffTask='';
+  showPage('dashboard');
+}
+
+function refreshUserHeader(){
+  if(!currentUser) return;
+  document.getElementById('userName').textContent=currentUser.name||'Người dùng';
+  document.getElementById('userRole').textContent=ROLE_LABELS[normalizedClientRole(currentUser.role)]||'Nhân viên';
+  document.getElementById('userAvatar').textContent=(currentUser.name||'U').charAt(0).toUpperCase();
+}
+
+const pageMeta={
+  dashboard:{title:'Tổng quan',description:'Tổng quan hoạt động hệ thống'},
+  inventory:{title:'Kho hàng',description:'Quản lý hàng hóa và tồn kho'},
+  attendance:{title:'Chấm công',description:'Theo dõi giờ công và chi phí nhân sự'},
+  orders:{title:'Đơn hàng',description:'Theo dõi và xử lý đơn hàng'},
+  reports:{title:'Báo cáo',description:'Theo dõi dữ liệu hoạt động'},
+  account:{title:'Tài khoản',description:'Thông tin cá nhân và bảo mật tài khoản'},
+  settings:{title:'Cài đặt',description:'Thiết lập hệ thống'}
+};
+
+document.querySelectorAll('.menu-item').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const task=btn.dataset.staffTaskSidebar;
+    const page=btn.dataset.page;
+
+    if(task){
+      const role=normalizedClientRole(currentUser&&currentUser.role);
+      if(role!=='STAFF') return;
+
+      document.querySelectorAll('.menu-item').forEach(x=>{
+        x.classList.toggle('active',x===btn);
+      });
+
+      renderStaffTaskPlaceholder_(task);
+      return;
+    }
+
+    showPage(page);
+  });
+});
+
+function showPage(page){
+  if(typeof renderSidebarByRole_==='function')renderSidebarByRole_();
+  if(typeof resetPageLayout_==='function')resetPageLayout_();
+  document.getElementById('pageContent').classList.remove('employee-profile','account-profile');
+  const meta=pageMeta[page]||pageMeta.dashboard;
+  document.querySelectorAll('.menu-item').forEach(btn=>{
+    btn.classList.toggle('active',btn.dataset.page===page);
+  });
+  document.getElementById('pageTitle').textContent=meta.title;
+  document.getElementById('pageDescription').textContent=meta.description;
+
+  if(page==='account'){
+    renderAccountHub();
+    return;
+  }
+
+  const labels={
+    dashboard:['Chào mừng đến với MAGASIN','Hãy chọn chức năng từ menu để bắt đầu vận hành hệ thống.'],
+    inventory:['Kho hàng','Khu vực quản lý kho hàng sẽ được phát triển theo cấu trúc hệ thống hiện tại.'],
+    attendance:['Chấm công','Theo dõi giờ công, bậc nhân viên và thành tiền theo cửa hàng.'],
+    orders:['Đơn hàng','Khu vực quản lý đơn hàng sẽ được phát triển theo cấu trúc hệ thống hiện tại.'],
+    reports:['Báo cáo','Khu vực báo cáo sẽ được phát triển theo cấu trúc hệ thống hiện tại.'],
+    settings:['Cài đặt','Khu vực thiết lập hệ thống sẽ được phát triển theo cấu trúc hiện tại.']
+  };
+  const content=labels[page]||labels.dashboard;
+  document.getElementById('pageContent').innerHTML=
+    '<h2>'+escapeClientHtml(content[0])+'</h2><p>'+escapeClientHtml(content[1])+'</p>';
+}
+
+function openAccountSettings(){
+  showPage('account');
+}
+
+document.getElementById('userAccountButton').addEventListener('click',openAccountSettings);
+
+function renderAccountHub(){
+  const box=document.getElementById('pageContent');
+  box.classList.remove('employee-profile');
+  box.classList.add('account-profile');
+
+  const name=escapeClientHtml((currentUser&&currentUser.name)||'Người dùng');
+  const role=escapeClientHtml((currentUser&&currentUser.role)||'Nhân viên');
+  const email=escapeClientHtml((currentUser&&currentUser.email)||'Email chưa cập nhật');
+  const phone=escapeClientHtml((currentUser&&currentUser.phone)||'Chưa cập nhật');
+  const avatar=escapeClientHtml(((currentUser&&currentUser.name)||'U').charAt(0).toUpperCase());
+
+  box.innerHTML=
+    '<h2>Tài khoản</h2>'+
+    '<p class="account-intro">Quản lý thông tin liên hệ và bảo mật tài khoản của bạn.</p>'+
+    '<div class="account-card">'+
+      '<div class="account-summary">'+
+        '<div class="account-avatar">'+avatar+'</div>'+
+        '<div class="account-summary-name">'+
+          '<strong>'+name+'</strong>'+
+          '<span>'+role+'</span>'+
+        '</div>'+
+      '</div>'+
+      '<div class="account-list">'+
+        '<button type="button" class="account-item" data-account-action="email">'+
+          '<span class="account-item-icon">✉️</span>'+
+          '<span class="account-item-text"><strong>Email</strong><span>'+email+'</span></span>'+
+          '<span class="account-item-arrow">›</span>'+
+        '</button>'+
+        '<button type="button" class="account-item" data-account-action="phone">'+
+          '<span class="account-item-icon">📱</span>'+
+          '<span class="account-item-text"><strong>Số điện thoại</strong><span>'+phone+'</span></span>'+
+          '<span class="account-item-arrow">›</span>'+
+        '</button>'+
+        '<button type="button" class="account-item" data-account-action="password">'+
+          '<span class="account-item-icon">🔐</span>'+
+          '<span class="account-item-text"><strong>Đổi mật khẩu</strong><span>Thay đổi mật khẩu hoặc mật khẩu tạm thời</span></span>'+
+          '<span class="account-item-arrow">›</span>'+
+        '</button>'+
+      '</div>'+
+    '</div>';
+}
+
+document.addEventListener('click',function(e){
+  const item=e.target.closest('[data-account-action]');
+  if(!item) return;
+  const action=item.dataset.accountAction;
+  if(action==='email') renderAccountEmail();
+  if(action==='phone') renderAccountPhone();
+  if(action==='password') renderAccountPassword();
+});
+
+function accountBackButton(){
+  return '<button type="button" class="account-back" data-account-back="1">← Quay lại tài khoản</button>';
+}
+
+document.addEventListener('click',function(e){
+  const edit=e.target.closest('[data-edit-attendance]');
+  if(edit) startEditAttendance_(edit.dataset.editAttendance);
+});
+
+document.addEventListener('click',function(e){
+  const back=e.target.closest('[data-account-back]');
+  if(back) renderAccountHub();
+});
+
+function renderAccountEmail(){
+  const box=document.getElementById('pageContent');
+  box.classList.add('account-profile');
+  box.innerHTML=
+    '<section class="account-section">'+
+      accountBackButton()+
+      '<h3>Email đã đăng ký</h3>'+
+      '<p>Email được sử dụng để xác thực và khôi phục mật khẩu.</p>'+
+      '<div class="account-readonly">'+escapeClientHtml((currentUser&&currentUser.email)||'Chưa cập nhật')+'</div>'+
+      '<p class="account-help">Để đảm bảo an toàn, email hiện không được thay đổi trực tiếp trong tài khoản.</p>'+
+    '</section>';
+}
+
+function renderAccountPhone(){
+  const box=document.getElementById('pageContent');
+  box.classList.add('account-profile');
+  box.innerHTML=
+    '<section class="account-section">'+
+      accountBackButton()+
+      '<h3>Số điện thoại</h3>'+
+      '<p>Cập nhật số điện thoại liên hệ của bạn.</p>'+
+      '<form id="employeeProfileForm" class="employee-form">'+
+        '<label>Số điện thoại<input name="phone" inputmode="tel" required value="'+escapeClientHtml((currentUser&&currentUser.phone)||'')+'"></label>'+
+        '<button class="employee-save" type="submit">Lưu số điện thoại</button>'+
+        '<p id="employeeProfileMessage" class="employee-message"></p>'+
+      '</form>'+
+    '</section>';
+}
+
+function renderAccountPassword(){
+  const box=document.getElementById('pageContent');
+  box.classList.add('account-profile');
+  box.innerHTML=
+    '<section class="account-section">'+
+      accountBackButton()+
+      '<h3>Đổi mật khẩu</h3>'+
+      '<p>Nếu bạn vừa nhận mật khẩu ngẫu nhiên qua email, hãy nhập mật khẩu đó vào ô đầu tiên để tạo mật khẩu mới.</p>'+
+      '<form id="employeePasswordForm" class="employee-form">'+
+        '<label>Mật khẩu hiện tại / mật khẩu tạm<input name="currentPassword" type="password" autocomplete="current-password" required></label>'+
+        '<label>Mật khẩu mới<input name="newPassword" type="password" minlength="8" autocomplete="new-password" required></label>'+
+        '<label>Nhập lại mật khẩu mới<input name="confirmPassword" type="password" minlength="8" autocomplete="new-password" required></label>'+
+        '<button class="employee-save" type="submit">Đổi mật khẩu</button>'+
+        '<p class="password-note">Mật khẩu mới tối thiểu 8 ký tự và phải nhập lại chính xác.</p>'+
+        '<p id="employeePasswordMessage" class="employee-message"></p>'+
+      '</form>'+
+    '</section>';
+}
+
+function loadEmployeeProfile(){
+  if(!currentSessionToken) return;
+  google.script.run
+    .withSuccessHandler(r=>{
+      if(!r || !r.ok) return;
+      const p=r.profile||{};
+      currentUser=Object.assign({},currentUser||{},{
+        username:p.username,
+        name:p.fullName,
+        email:p.email,
+        phone:p.phone,
+        role:p.role
+      });
+      refreshUserHeader();
+    })
+    .getCurrentEmployeeProfile(currentSessionToken);
+}
+
+document.addEventListener('submit',function(e){
+  if(e.target && e.target.id==='employeeProfileForm'){
+    e.preventDefault();
+    const f=e.target, btn=f.querySelector('button[type="submit"]');
+    setAppButton(btn,true,'Lưu thông tin');
+    google.script.run
+      .withSuccessHandler(r=>{
+        setAppButton(btn,false,'Lưu thông tin');
+        showEmployeeMessage('employeeProfileMessage',r.message||'',!!r.ok);
+        if(r.ok && r.user){
+          currentUser=r.user;
+          refreshUserHeader();
+        }
+      })
+      .withFailureHandler(()=>{
+        setAppButton(btn,false,'Lưu thông tin');
+        showEmployeeMessage('employeeProfileMessage','Có lỗi kết nối. Vui lòng thử lại.',false);
+      })
+      .updateCurrentEmployeeProfile({
+        token:currentSessionToken,
+        fullName:(currentUser&&currentUser.name)||'',
+        phone:f.phone.value
+      });
+  }
+
+  if(e.target && e.target.id==='employeePasswordForm'){
+    e.preventDefault();
+    const f=e.target, btn=f.querySelector('button[type="submit"]');
+    if(f.newPassword.value!==f.confirmPassword.value){
+      showEmployeeMessage('employeePasswordMessage','Mật khẩu nhập lại chưa trùng khớp.',false);
+      return;
+    }
+    setAppButton(btn,true,'Đổi mật khẩu');
+    google.script.run
+      .withSuccessHandler(r=>{
+        setAppButton(btn,false,'Đổi mật khẩu');
+        showEmployeeMessage('employeePasswordMessage',r.message||'',!!r.ok);
+        if(r.ok) f.reset();
+      })
+      .withFailureHandler(()=>{
+        setAppButton(btn,false,'Đổi mật khẩu');
+        showEmployeeMessage('employeePasswordMessage','Có lỗi kết nối. Vui lòng thử lại.',false);
+      })
+      .changeCurrentEmployeePassword({
+        token:currentSessionToken,
+        currentPassword:f.currentPassword.value,
+        newPassword:f.newPassword.value,
+        confirmPassword:f.confirmPassword.value
+      });
+  }
+});
+
+function setAppButton(btn,loading,text){
+  if(!btn) return;
+  btn.disabled=loading;
+  btn.textContent=loading?'Đang xử lý…':text;
+}
+
+function showEmployeeMessage(id,text,ok){
+  const el=document.getElementById(id);
+  if(!el) return;
+  el.textContent=text||'';
+  el.style.color=ok?'#0f9f75':'#c2414a';
+}
+
+function escapeClientHtml(value){
+  return String(value||'').replace(/[&<>"']/g,function(ch){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];
+  });
+}
+
+function handleLogout(){
+  const token=currentSessionToken;
+  currentSessionToken='';
+  currentUser=null;
+  magasinCurrentPageKey='dashboard';
+  magasinCurrentStaffTask='';
+  clearMagasinSessionStorage_();
+
+  const finish=function(){
+    document.getElementById('app').classList.remove('active');
+    document.querySelector('.card').style.display='';
+    document.getElementById('loginForm').reset();
+    view('login');
+  };
+
+  if(token && window.google && google.script && google.script.run){
+    google.script.run
+      .withSuccessHandler(finish)
+      .withFailureHandler(finish)
+      .logout(token);
+  }else{
+    finish();
+  }
+}
+
+
+/* =========================================================
+   ROLE BASED ACCESS — BỔ SUNG
+========================================================= */
+const ROLE_LABELS={
+  OWNER:'Chủ cửa hàng',
+  INVENTORY_MANAGER:'Quản lý kho',
+  STORE_MANAGER:'Quản lý cửa hàng',
+  STAFF:'Nhân viên'
+};
+
+const ROLE_PAGES={
+  OWNER:['dashboard','inventory','attendance','orders','reports','settings'],
+  INVENTORY_MANAGER:['dashboard','inventory','reports'],
+  STORE_MANAGER:['dashboard','inventory','attendance','orders','reports'],
+  STAFF:['dashboard','inventory']
+};
+
+function normalizedClientRole(role){
+  const v=String(role||'').trim().toUpperCase();
+
+  if(v==='OWNER'||v==='CHỦ CỬA HÀNG'||v==='CHU CUA HANG') return 'OWNER';
+
+  if(
+    v==='INVENTORY_MANAGER'||
+    v==='QUẢN LÝ KHO'||
+    v==='QUAN LY KHO'
+  ) return 'INVENTORY_MANAGER';
+
+  if(
+    v==='STORE_MANAGER'||
+    v==='QUẢN LÝ CỬA HÀNG'||
+    v==='QUAN LY CUA HANG'||
+    v==='MANAGER'||
+    v==='QUẢN LÝ'||
+    v==='QUAN LY'
+  ) return 'STORE_MANAGER';
+
+  return 'STAFF';
+}
+
+function applyRoleBasedUI(){
+  if(!currentUser) return;
+  const role=normalizedClientRole(currentUser.role);
+  currentUser.role=role;
+  const allowed=ROLE_PAGES[role]||ROLE_PAGES.STAFF;
+
+  document.querySelectorAll('.menu-item').forEach(btn=>{
+    /* 3 tác vụ nhân viên không có data-page.
+       Phải xử lý riêng, nếu không logic phân quyền sẽ
+       đặt inline display:none và CSS không thể hiện lại. */
+    /* Frontend thực tế dùng class .staff-only-menu cho toàn bộ menu nhân viên.
+       Không dùng .staff-task-menu-item vì class đó không tồn tại trong Index.html. */
+    if(btn.classList.contains('staff-only-menu')){
+      btn.style.display = role==='STAFF' ? 'flex' : 'none';
+      return;
+    }
+
+    if(btn.classList.contains('manager-attendance-menu-item')){btn.style.display=(role==='OWNER'||role==='STORE_MANAGER')?'flex':'none';return;}
+
+    const allowedPage=allowed.indexOf(btn.dataset.page)!==-1;
+    btn.style.display=allowedPage?'':'none';
+  });
+
+  const active=document.querySelector('.menu-item.active');
+  if(
+    active &&
+    !active.classList.contains('staff-only-menu') &&
+    active.dataset.page &&
+    allowed.indexOf(active.dataset.page)===-1
+  ){
+    showPage('dashboard');
+  }
+}
+
+function syncAccessFromServer(){
+  if(!currentSessionToken) return;
+  google.script.run.withSuccessHandler(r=>{
+    if(!r||!r.ok||!currentUser) return;
+    currentUser.role=r.role||currentUser.role;
+    currentUser.accessScope=r.accessScope||'';
+    refreshUserHeader();
+    applyRoleBasedUI();
+  }).getMyAccess(currentSessionToken);
+}
+
+const _openAppOriginal=openApp;
+openApp=function(user,sessionToken){
+  if(user) user.role=normalizedClientRole(user.role);
+  _openAppOriginal(user,sessionToken);
+  applyRoleBasedUI();
+  syncAccessFromServer();
+};
+
+const _showPageOriginal=showPage;
+showPage=function(page){
+  if(page!=='account' && currentUser){
+    const allowed=ROLE_PAGES[normalizedClientRole(currentUser.role)]||ROLE_PAGES.STAFF;
+    if(allowed.indexOf(page)===-1) page='dashboard';
+  }
+  _showPageOriginal(page);
+};
+
+const _renderSettingsOriginal = null;
+function renderSettingsHub(){
+  const box=document.getElementById('pageContent');
+  box.classList.remove('employee-profile','account-profile');
+  box.classList.add('owner-settings-entry');
+
+  const isOwner=normalizedClientRole(currentUser&&currentUser.role)==='OWNER';
+  box.innerHTML=
+    '<h2>Cài đặt</h2>'+
+    '<p class="account-intro">Thiết lập các chức năng vận hành của hệ thống.</p>'+
+    (isOwner?
+      '<button type="button" class="settings-action-card" id="openUserManagement">'+
+        '<span class="account-item-icon">👥</span>'+
+        '<span class="account-item-text"><strong>Quản lý tài khoản</strong><span>Phân quyền 4 vai trò và phạm vi truy cập</span></span>'+
+        '<span class="arrow">›</span>'+
+      '</button>':
+      '<div class="account-section"><h3>Cài đặt</h3><p>Bạn chỉ có quyền xem và sử dụng các chức năng được phân quyền.</p></div>');
+}
+
+const _showPageForAttendance=showPage;
+showPage=function(page){
+  if(page==='attendance'){
+    const role=normalizedClientRole(currentUser&&currentUser.role);
+    if(role!=='OWNER'&&role!=='STORE_MANAGER'){_showPageForAttendance('dashboard');return;}
+    document.querySelectorAll('.menu-item').forEach(btn=>btn.classList.toggle('active',btn.dataset.page==='attendance'));
+    document.getElementById('pageTitle').textContent='Chấm công';
+    document.getElementById('pageDescription').textContent='Tổng giờ công và chi phí nhân sự theo ngày hoặc khoảng thời gian';
+    renderAttendanceManagement_();
+    return;
+  }
+  _showPageForAttendance(page);
+};
+
+const _showPageForSettings=showPage;
+showPage=function(page){
+  if(page==='settings'){
+    if(currentUser){
+      const allowed=ROLE_PAGES[normalizedClientRole(currentUser.role)]||ROLE_PAGES.STAFF;
+      if(allowed.indexOf('settings')===-1){ _showPageOriginal('dashboard'); return; }
+    }
+    const meta=pageMeta.settings;
+    document.querySelectorAll('.menu-item').forEach(btn=>btn.classList.toggle('active',btn.dataset.page==='settings'));
+    document.getElementById('pageTitle').textContent=meta.title;
+    document.getElementById('pageDescription').textContent=meta.description;
+    renderSettingsHub();
+    return;
+  }
+  _showPageForSettings(page);
+};
+
+document.addEventListener('click',function(e){
+  if(e.target.closest('#openUserManagement')) renderUserManagement();
+});
+
+function renderUserManagement(){
+  if(normalizedClientRole(currentUser&&currentUser.role)!=='OWNER'){
+    showPage('dashboard');
+    return;
+  }
+
+  const box=document.getElementById('pageContent');
+  box.className='page-content owner-management';
+  box.innerHTML=
+    '<div class="owner-toolbar">'+
+      '<div><button type="button" class="account-back" id="backToSettings">← Quay lại cài đặt</button><h2>Quản lý tài khoản</h2><p class="account-intro">Thay đổi vai trò, trạng thái và phạm vi truy cập. Gmail và tài khoản được giữ nguyên.</p></div>'+
+      '<input id="userManagementSearch" placeholder="Tìm tên, email hoặc tên đăng nhập">'+
+    '</div>'+
+    '<div id="ownerUserList" class="owner-list"><p>Đang tải danh sách tài khoản…</p></div>';
+
+  google.script.run
+    .withSuccessHandler(r=>{
+      if(!r||!r.ok){
+        document.getElementById('ownerUserList').innerHTML='<p>Không thể tải danh sách tài khoản.</p>';
+        return;
+      }
+      window.__managedUsers=r.users||[];
+      drawManagedUsers(window.__managedUsers);
+    })
+    .withFailureHandler(()=>{
+      document.getElementById('ownerUserList').innerHTML='<p>Không thể kết nối để tải danh sách tài khoản.</p>';
+    })
+    .getUsersForManagement(currentSessionToken);
+}
+
+function drawManagedUsers(users){
+  const list=document.getElementById('ownerUserList');
+  if(!list) return;
+  if(!users.length){list.innerHTML='<p>Chưa có tài khoản nào.</p>';return;}
+  list.innerHTML=users.map(u=>{
+    const role=normalizedClientRole(u.role);
+    const safeId=escapeClientHtml(u.id);
+    return '<article class="owner-user-card" data-managed-user="'+safeId+'">'+
+      '<div class="owner-user-head"><div><div class="owner-user-name">'+escapeClientHtml(u.fullName||u.username)+'</div>'+
+      '<div class="owner-user-meta">'+escapeClientHtml(u.username)+' · '+escapeClientHtml(u.email)+'</div></div>'+
+      '<span class="role-badge">'+escapeClientHtml(ROLE_LABELS[role])+'</span></div>'+
+      '<div class="owner-user-grid">'+
+      '<label>Vai trò<select data-field="role" '+(role==='OWNER'?'disabled':'')+'>'+
+      '<option value="STAFF" '+(role==='STAFF'?'selected':'')+'>Nhân viên</option>'+
+      '<option value="INVENTORY_MANAGER" '+(role==='INVENTORY_MANAGER'?'selected':'')+'>Quản lý kho</option>'+
+      '<option value="STORE_MANAGER" '+(role==='STORE_MANAGER'?'selected':'')+'>Quản lý cửa hàng</option>'+
+      '<option value="OWNER" '+(role==='OWNER'?'selected':'')+'>Chủ cửa hàng</option>'+
+      '</select></label>'+
+      '<label>Trạng thái<select data-field="status">'+
+      '<option value="ACTIVE" '+(String(u.status).toUpperCase()==='ACTIVE'?'selected':'')+'>Đang hoạt động</option>'+
+      '<option value="PENDING" '+(String(u.status).toUpperCase()==='PENDING'?'selected':'')+'>Chờ xác thực</option>'+
+      '<option value="INACTIVE" '+(String(u.status).toUpperCase()==='INACTIVE'?'selected':'')+'>Ngưng hoạt động</option>'+
+      '</select></label>'+
+      '<label>Phạm vi truy cập<input data-field="accessScope" value="'+escapeClientHtml(u.accessScope||'')+'" placeholder="Ví dụ: ALL, CN01, CN01,CN02"></label>'+
+      '</div><div class="owner-save-row"><button type="button" class="owner-save" data-save-managed="'+safeId+'">Lưu thay đổi</button></div></article>';
+  }).join('');
+}
+
+document.addEventListener('input',function(e){
+  if(e.target && e.target.id==='userManagementSearch'){
+    const q=e.target.value.toLowerCase().trim();
+    const users=(window.__managedUsers||[]).filter(u=>
+      [u.fullName,u.username,u.email].join(' ').toLowerCase().indexOf(q)!==-1
+    );
+    drawManagedUsers(users);
+  }
+});
+
+document.addEventListener('click',function(e){
+  if(e.target.closest('#backToSettings')){showPage('settings');return;}
+  const btn=e.target.closest('[data-save-managed]');
+  if(!btn) return;
+  const card=btn.closest('.owner-user-card');
+  if(!card) return;
+
+  const id=btn.dataset.saveManaged;
+  const roleEl=card.querySelector('[data-field="role"]');
+  const statusEl=card.querySelector('[data-field="status"]');
+  const scopeEl=card.querySelector('[data-field="accessScope"]');
+
+  btn.disabled=true;btn.textContent='Đang lưu…';
+  google.script.run
+    .withSuccessHandler(r=>{
+      btn.disabled=false;btn.textContent='Lưu thay đổi';
+      if(!r||!r.ok){alert((r&&r.message)||'Không thể cập nhật tài khoản.');return;}
+      const users=window.__managedUsers||[];
+      const index=users.findIndex(u=>String(u.id)===String(id));
+      if(index!==-1){
+        users[index].role=r.user.role;
+        users[index].roleLabel=r.user.roleLabel;
+        users[index].status=r.user.status;
+        users[index].accessScope=r.user.accessScope;
+      }
+      drawManagedUsers(users);
+    })
+    .withFailureHandler(()=>{
+      btn.disabled=false;btn.textContent='Lưu thay đổi';
+      alert('Có lỗi kết nối. Vui lòng thử lại.');
+    })
+    .updateManagedUser({
+      token:currentSessionToken,
+      id:id,
+      role:roleEl?roleEl.value:'STAFF',
+      status:statusEl?statusEl.value:'ACTIVE',
+      accessScope:scopeEl?scopeEl.value:''
+    });
+});
+
+
+/* =========================================================
+   PASSWORD VISIBILITY — BỔ SUNG
+========================================================= */
+(function(){
+  const eyeIcon =
+    '<svg class="icon-eye" viewBox="0 0 24 24" fill="none" aria-hidden="true">'+
+    '<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>'+
+    '<circle cx="12" cy="12" r="2.7" stroke="currentColor" stroke-width="1.8"/>'+
+    '</svg>';
+  const eyeOffIcon =
+    '<svg class="icon-eye-off" viewBox="0 0 24 24" fill="none" aria-hidden="true">'+
+    '<path d="M3 3l18 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>'+
+    '<path d="M10.6 5.7A9.7 9.7 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a17 17 0 0 1-3 3.7M6.3 6.3C4 8 2.5 12 2.5 12S6 18.5 12 18.5c1.4 0 2.7-.35 3.8-.9M9.5 9.5A3.5 3.5 0 0 0 14.5 14.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>'+
+    '</svg>';
+
+  function enhancePasswordFields(root){
+    const scope = root && root.querySelectorAll ? root : document;
+    scope.querySelectorAll('input[type="password"]:not([data-password-toggle-ready])').forEach(function(input){
+      if(input.disabled || input.readOnly) return;
+      input.setAttribute('data-password-toggle-ready','1');
+
+      const wrap = document.createElement('span');
+      wrap.className = 'password-field';
+      input.parentNode.insertBefore(wrap,input);
+      wrap.appendChild(input);
+
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'password-toggle';
+      button.setAttribute('aria-label','Hiển thị mật khẩu');
+      button.setAttribute('aria-pressed','false');
+      button.innerHTML = eyeIcon + eyeOffIcon;
+
+      button.addEventListener('click',function(){
+        const visible = input.type === 'text';
+        input.type = visible ? 'password' : 'text';
+        button.classList.toggle('is-visible', !visible);
+        button.setAttribute('aria-pressed', String(!visible));
+        button.setAttribute('aria-label', visible ? 'Hiển thị mật khẩu' : 'Ẩn mật khẩu');
+        input.focus({preventScroll:true});
+      });
+
+      wrap.appendChild(button);
+    });
+  }
+
+  window.enhancePasswordFields = enhancePasswordFields;
+
+  function init(){
+    enhancePasswordFields(document);
+    if(document.body && window.MutationObserver){
+      const observer = new MutationObserver(function(records){
+        records.forEach(function(record){
+          record.addedNodes.forEach(function(node){
+            if(node.nodeType === 1) enhancePasswordFields(node);
+          });
+        });
+      });
+      observer.observe(document.body,{childList:true,subtree:true});
+    }
+  }
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded',init);
+  }else{
+    init();
+  }
+})();
+
+/* =========================================================
+   STAFF BASIC TASKS + 4-ROLE DISPLAY — BỔ SUNG
+   Không thay đổi cấu trúc menu hiện tại.
+   Nhân viên sử dụng Kho hàng như một khu vực tác vụ cơ bản.
+========================================================= */
+
+function renderBasicStaffTasks_(){
+  const box=document.getElementById('pageContent');
+  if(!box) return;
+
+  box.classList.remove('employee-profile','account-profile');
+  box.classList.add('staff-basic-tasks');
+
+  box.innerHTML=
+    '<h2>Tác vụ nhân viên</h2>'+
+    '<p class="account-intro">Thực hiện các công việc cơ bản trong ca làm việc.</p>'+
+    '<div class="staff-task-grid">'+
+
+      '<button type="button" class="staff-task-card" data-staff-task="attendance">'+
+        '<span class="staff-task-icon">⏱️</span>'+
+        '<span><strong>Chấm công</strong><small>Ghi nhận thời gian vào ca và kết thúc ca</small></span>'+
+        '<b>›</b>'+
+      '</button>'+
+
+      '<button type="button" class="staff-task-card" data-staff-task="stock-entry">'+
+        '<span class="staff-task-icon">📥</span>'+
+        '<span><strong>Nhập tồn hàng hóa</strong><small>Cập nhật số lượng hàng hóa được giao hoặc bổ sung</small></span>'+
+        '<b>›</b>'+
+      '</button>'+
+
+      '<button type="button" class="staff-task-card" data-staff-task="equipment-check">'+
+        '<span class="staff-task-icon">🧰</span>'+
+        '<span><strong>Kiểm kê dụng cụ</strong><small>Kiểm tra số lượng và tình trạng dụng cụ tại cửa hàng</small></span>'+
+        '<b>›</b>'+
+      '</button>'+
+
+    '</div>';
+}
+
+function employeeSetPage_(title, desc){
+  document.getElementById('pageTitle').textContent=title;
+  document.getElementById('pageDescription').textContent=desc;
+  document.querySelectorAll('.menu-item').forEach(btn=>{
+    btn.classList.remove('active');
+  });
+}
+
+function renderStaffTaskPlaceholder_(task){
+  const role=normalizedClientRole(currentUser&&currentUser.role);
+  if(role!=='STAFF') return;
+
+  const box=document.getElementById('pageContent');
+  if(!box) return;
+
+  employeeSetPage_('Nhân viên','Quản lý công việc cá nhân');
+
+  if(task==='schedule') renderEmployeeSchedule_();
+  else if(task==='attendance') renderEmployeeAttendance_();
+  else if(task==='shift-swap') renderEmployeeShiftSwap_();
+  else if(task==='kpi') renderEmployeeKpi_();
+  else if(task==='stock-entry') renderEmployeeStockEntry_();
+  else if(task==='equipment-check') renderEmployeeEquipmentCheck_();
+}
+
+function employeeModuleShell_(title, intro, body){
+  return '<section class="employee-module">'+
+    '<div class="employee-module-head">'+
+      '<div><h2>'+escapeClientHtml(title)+'</h2><p>'+escapeClientHtml(intro)+'</p></div>'+
+    '</div>'+body+'</section>';
+}
+
+/* =========================================================
+   MAGASIN V37 — HEADER NAV + LEFT DRAWER
+   - Hamburger nằm trên topbar, cùng hàng với tiêu đề.
+   - Drawer bắt đầu bên dưới topbar, trượt từ trái sang.
+   - Overlay chỉ phủ phần nội dung, không phủ topbar/drawer.
+   - Parent có submenu + mũi tên.
+   - Child giữ nguyên route và permission hiện tại.
+========================================================= */
+(function(){
+  const SIDEBAR_STATE_KEY='magasin_sidebar_drawer_open';
+  let drawerReady=false;
+
+  function role_(){
+    return typeof normalizedClientRole==='function'
+      ? normalizedClientRole(currentUser&&currentUser.role)
+      : 'STAFF';
+  }
+
+  function esc_(value){
+    return typeof escapeClientHtml==='function'
+      ? escapeClientHtml(value)
+      : String(value==null?'':value)
+          .replace(/&/g,'&amp;')
+          .replace(/</g,'&lt;')
+          .replace(/>/g,'&gt;')
+          .replace(/"/g,'&quot;')
+          .replace(/'/g,'&#39;');
+  }
+
+  function childPage_(label,icon,page,extraClass){
+    const cls='menu-item magasin-drawer-child '+(extraClass||'');
+    return '<button type="button" class="'+cls+'" data-page="'+esc_(page)+'">'+
+      '<span class="menu-icon">'+icon+'</span>'+
+      '<span class="menu-text">'+esc_(label)+'</span>'+
+      '</button>';
+  }
+
+  function childTask_(label,icon,task){
+    return '<button type="button" class="menu-item magasin-drawer-child staff-task-menu-item staff-only-menu" data-staff-task-sidebar="'+esc_(task)+'">'+
+      '<span class="menu-icon">'+icon+'</span>'+
+      '<span class="menu-text">'+esc_(label)+'</span>'+
+      '</button>';
+  }
+
+  function group_(title,items,key){
+    return '<div class="magasin-drawer-group" data-drawer-group="'+esc_(key)+'">'+
+      '<button type="button" class="magasin-drawer-parent" aria-expanded="false">'+
+        '<span class="magasin-drawer-parent-title">'+esc_(title)+'</span>'+
+        '<span class="magasin-drawer-arrow" aria-hidden="true">›</span>'+
+      '</button>'+
+      '<div class="magasin-drawer-children" hidden>'+items+'</div>'+
+    '</div>';
+  }
+
+  function buildMenu_(){
+    const menu=document.getElementById('appMenu');
+    if(!menu) return;
+
+    const role=role_();
+    let html='';
+
+    if(role==='STAFF'){
+      html += '<button type="button" class="magasin-drawer-direct menu-item" data-page="dashboard">'+
+        '<span class="menu-icon">🏠</span><span class="menu-text">Tổng quan</span></button>';
+      html += group_('Công việc',
+        childTask_('Lịch làm','📅','schedule')+
+        childTask_('Chấm công','⏱️','attendance')+
+        childTask_('Đổi ca','🔄','shift-swap'),
+        'work');
+      html += group_('Kho hàng',childPage_('Tồn hàng','📦','inventory'),'inventory');
+      html += group_('Tài khoản',childPage_('Thông tin cá nhân','👤','account','staff-personal-menu-item'),'account');
+    }else if(role==='OWNER'){
+      html += '<button type="button" class="magasin-drawer-direct menu-item" data-page="dashboard">'+
+        '<span class="menu-icon">🏠</span><span class="menu-text">Tổng quan</span></button>';
+      html += group_('Vận hành',
+        childPage_('Kho hàng','📦','inventory')+
+        childPage_('Chấm công','⏱️','attendance','manager-attendance-menu-item')+
+        childPage_('Đơn hàng','🛒','orders'),'operations');
+      html += group_('Báo cáo',childPage_('Báo cáo','📊','reports'),'reports');
+      html += group_('Hệ thống',
+        childPage_('Cài đặt','⚙️','settings')+
+        childPage_('Thông tin cá nhân','👤','account'),'system');
+    }else if(role==='STORE_MANAGER'){
+      html += '<button type="button" class="magasin-drawer-direct menu-item" data-page="dashboard">'+
+        '<span class="menu-icon">🏠</span><span class="menu-text">Tổng quan</span></button>';
+      html += group_('Vận hành',
+        childPage_('Kho hàng','📦','inventory')+
+        childPage_('Chấm công','⏱️','attendance','manager-attendance-menu-item')+
+        childPage_('Đơn hàng','🛒','orders'),'operations');
+      html += group_('Báo cáo',childPage_('Báo cáo','📊','reports'),'reports');
+      html += group_('Tài khoản',childPage_('Thông tin cá nhân','👤','account'),'account');
+    }else if(role==='INVENTORY_MANAGER'){
+      html += '<button type="button" class="magasin-drawer-direct menu-item" data-page="dashboard">'+
+        '<span class="menu-icon">🏠</span><span class="menu-text">Tổng quan</span></button>';
+      html += group_('Kho hàng',childPage_('Kho hàng','📦','inventory'),'inventory');
+      html += group_('Báo cáo',childPage_('Báo cáo','📊','reports'),'reports');
+      html += group_('Tài khoản',childPage_('Thông tin cá nhân','👤','account'),'account');
+    }else{
+      html += '<button type="button" class="magasin-drawer-direct menu-item" data-page="dashboard">'+
+        '<span class="menu-icon">🏠</span><span class="menu-text">Tổng quan</span></button>';
+    }
+
+    menu.innerHTML=html;
+    bindDrawerMenu_();
+    syncDrawerActive_();
+  }
+
+  function getSidebar_(){return document.querySelector('.sidebar');}
+  function getHeaderToggle_(){return document.getElementById('headerMenuToggle');}
+  function getApp_(){return document.getElementById('app');}
+  function getOverlay_(){return document.getElementById('magasinDrawerOverlay');}
+
+  function setHeaderState_(open){
+    const toggle=getHeaderToggle_();
+    if(!toggle) return;
+    toggle.setAttribute('aria-expanded',open?'true':'false');
+    toggle.setAttribute('aria-label',open?'Đóng menu':'Mở menu');
+    toggle.classList.toggle('is-open',!!open);
+  }
+
+  function openDrawer_(){
+    const sidebar=getSidebar_();
+    const app=getApp_();
+    const overlay=getOverlay_();
+    if(!sidebar||!app) return;
+    sidebar.classList.add('is-expanded');
+    app.classList.add('drawer-open');
+    if(overlay) overlay.classList.add('active');
+    document.documentElement.classList.add('magasin-drawer-open');
+    setHeaderState_(true);
+    try{localStorage.setItem(SIDEBAR_STATE_KEY,'1');}catch(err){}
+  }
+
+  function closeDrawer_(){
+    const sidebar=getSidebar_();
+    const app=getApp_();
+    const overlay=getOverlay_();
+    if(!sidebar||!app) return;
+    sidebar.classList.remove('is-expanded');
+    app.classList.remove('drawer-open');
+    if(overlay) overlay.classList.remove('active');
+    document.documentElement.classList.remove('magasin-drawer-open');
+    setHeaderState_(false);
+    try{localStorage.setItem(SIDEBAR_STATE_KEY,'0');}catch(err){}
+  }
+
+  function toggleDrawer_(){
+    const sidebar=getSidebar_();
+    if(sidebar&&sidebar.classList.contains('is-expanded')) closeDrawer_();
+    else openDrawer_();
+  }
+
+  function bindDrawerMenu_(){
+    const menu=document.getElementById('appMenu');
+    if(!menu) return;
+
+    menu.querySelectorAll('.magasin-drawer-parent').forEach(function(parent){
+      parent.addEventListener('click',function(){
+        const group=parent.closest('.magasin-drawer-group');
+        if(!group) return;
+        const children=group.querySelector('.magasin-drawer-children');
+        const isOpen=group.classList.toggle('open');
+        parent.setAttribute('aria-expanded',isOpen?'true':'false');
+        if(children) children.hidden=!isOpen;
+      });
+    });
+
+    menu.querySelectorAll('.magasin-drawer-direct, .magasin-drawer-child').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        const task=btn.dataset.staffTaskSidebar||'';
+        const page=btn.dataset.page||'';
+        if(task){
+          magasinCurrentPageKey='staff:'+task;
+          magasinCurrentStaffTask=task;
+          persistMagasinPageState_();
+          renderStaffTaskPlaceholder_(task);
+        }else if(page){
+          magasinCurrentPageKey=page;
+          magasinCurrentStaffTask='';
+          showPage(page);
+        }
+        syncDrawerActive_();
+        closeDrawer_();
+      });
+    });
+  }
+
+  function syncDrawerActive_(){
+    const page=String(magasinCurrentPageKey||'dashboard');
+    const task=String(magasinCurrentStaffTask||'');
+    document.querySelectorAll('#appMenu .magasin-drawer-child, #appMenu .magasin-drawer-direct').forEach(function(btn){
+      let active=false;
+      if(task && btn.dataset.staffTaskSidebar===task) active=true;
+      if(!task && btn.dataset.page===page) active=true;
+      btn.classList.toggle('active',active);
+    });
+
+    document.querySelectorAll('#appMenu .magasin-drawer-group').forEach(function(group){
+      const childActive=!!group.querySelector('.magasin-drawer-child.active');
+      const parent=group.querySelector('.magasin-drawer-parent');
+      const children=group.querySelector('.magasin-drawer-children');
+      if(childActive){
+        group.classList.add('open');
+        if(parent) parent.setAttribute('aria-expanded','true');
+        if(children) children.hidden=false;
+      }
+    });
+  }
+
+  function ensureDrawer_(){
+    if(drawerReady) return;
+    const sidebar=getSidebar_();
+    const menu=document.getElementById('appMenu');
+    const app=getApp_();
+    const headerToggle=getHeaderToggle_();
+    if(!sidebar||!menu||!app||!headerToggle) return;
+
+    sidebar.classList.add('magasin-drawer');
+    const legacyToggle=document.getElementById('sidebarToggle');
+    if(legacyToggle){ legacyToggle.tabIndex=-1; legacyToggle.setAttribute('aria-hidden','true'); }
+
+    let overlay=getOverlay_();
+    if(!overlay){
+      overlay=document.createElement('div');
+      overlay.id='magasinDrawerOverlay';
+      overlay.className='magasin-drawer-overlay';
+      app.appendChild(overlay);
+      overlay.addEventListener('click',closeDrawer_);
+    }
+
+    headerToggle.addEventListener('click',function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      toggleDrawer_();
+    });
+
+    document.addEventListener('keydown',function(e){
+      if(e.key==='Escape') closeDrawer_();
+    });
+
+    drawerReady=true;
+    buildMenu_();
+    setHeaderState_(false);
+    try{
+      // Không tự mở lại drawer sau F5. Chỉ giữ trạng thái navigation.
+      localStorage.setItem(SIDEBAR_STATE_KEY,'0');
+    }catch(err){}
+  }
+
+  const oldApplyRoleBasedUI=window.applyRoleBasedUI;
+  window.applyRoleBasedUI=function(){
+    if(typeof oldApplyRoleBasedUI==='function') oldApplyRoleBasedUI.apply(this,arguments);
+    ensureDrawer_();
+    buildMenu_();
+  };
+
+  const oldOpenApp=window.openApp;
+  window.openApp=function(user,sessionToken){
+    if(typeof oldOpenApp==='function') oldOpenApp.apply(this,arguments);
+    ensureDrawer_();
+    buildMenu_();
+    syncDrawerActive_();
+    closeDrawer_();
+  };
+
+  const oldShowPage=window.showPage;
+  window.showPage=function(page){
+    if(typeof oldShowPage==='function') oldShowPage.apply(this,arguments);
+    ensureDrawer_();
+    syncDrawerActive_();
+  };
+
+  document.addEventListener('DOMContentLoaded',function(){
+    ensureDrawer_();
+    setTimeout(ensureDrawer_,50);
+    setTimeout(syncDrawerActive_,120);
+  });
+
+  setTimeout(ensureDrawer_,0);
+  setTimeout(ensureDrawer_,150);
+})();

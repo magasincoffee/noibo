@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <!-- MAGASIN ARCH-01: HTML shell tối giản -->
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style id="magasinStyles">
+    <?!= include('_styles'); ?>
+  </style>
+</head>
+<body>
+<main class="card"><section class="brand"><div class="mark"><svg class="magasin-logo" viewBox="0 0 100 100" aria-label="MAGASIN" role="img">
+  <path fill="#ffffff" d="M18 82V53L28 22Q30 16 36 16H64Q70 16 72 22L82 53V82H67V50L61 29H39L33 50V82H18Z"/>
+  <path fill="#0b9eb7" d="M37 47Q38 40 43 37H57Q62 40 63 47L66 57Q50 59 34 57L37 47Z"/>
+  <path fill="#ffffff" d="M33 57Q50 60 67 57V69Q50 72 33 69V57Z"/>
+</svg></div><h1>MAGASIN</h1><p>Quản lý chuỗi cửa hàng đồ uống</p></section>
+<section id="login" class="view active"><form id="loginForm"><label>Tên đăng nhập<input name="username" autocomplete="username" required></label><label>Mật khẩu<input name="password" type="password" autocomplete="current-password" required></label><p class="forgot-line"><a href="#" data-view="forgot">Quên mật khẩu?</a></p><button class="button" type="submit">Đăng nhập</button></form><p class="switch">Chưa có tài khoản? <a href="#" data-view="register">Đăng ký ngay</a></p></section>
+
+<section id="forgot" class="view"><p class="hint">Nhập đúng email đã đăng ký. Hệ thống sẽ gửi một mật khẩu tạm thời và đường link để bạn tạo mật khẩu mới.</p><form id="forgotForm"><label>Email đã đăng ký<input name="email" type="email" autocomplete="email" placeholder="email@example.com" required></label><button class="button" type="submit">Gửi hướng dẫn</button></form><p class="switch"><a href="#" data-view="login">← Quay lại đăng nhập</a></p></section>
+
+<section id="reset" class="view"><p class="hint">Tạo mật khẩu mới cho tài khoản của bạn. Hãy nhập lại mật khẩu để xác nhận.</p><form id="resetForm"><label>Mật khẩu mới<input name="password" type="password" minlength="8" autocomplete="new-password" required></label><label>Nhập lại mật khẩu mới<input name="confirmPassword" type="password" minlength="8" autocomplete="new-password" required></label><button class="button" type="submit">Tạo mật khẩu mới</button></form><p class="switch"><a href="#" data-view="login">← Quay lại đăng nhập</a></p></section>
+<section id="register" class="view"><form id="registerForm"><div class="row"><label>Họ và tên<input name="fullName" required></label><label>Số điện thoại<input name="phone" inputmode="tel" placeholder="0901234567" required></label></div><label>Email công việc<input name="email" type="email" autocomplete="email" required></label><label>Tên đăng nhập<input name="username" autocomplete="username" required></label><label>Mật khẩu<input name="password" type="password" minlength="8" autocomplete="new-password" required></label><button class="button" type="submit">Gửi mã xác thực</button></form><p class="switch">Đã có tài khoản? <a href="#" data-view="login">Đăng nhập</a></p></section>
+<section id="verify" class="view"><p class="hint">Chúng tôi đã gửi mã gồm 6 chữ số đến <strong id="verifyEmail"></strong>. Mã có hiệu lực trong 15 phút.</p><form id="verifyForm"><label>Mã xác thực<input name="code" inputmode="numeric" maxlength="6" placeholder="123456" required></label><button class="button" type="submit">Xác thực email</button></form><p class="switch"><a href="#" data-view="register">Dùng email khác</a></p></section>
+<p id="message" class="message" role="status"></p><p class="footer">© 2026 MAGASIN · Hệ thống nội bộ</p></main>
+
+<div id="app" class="app-shell">
+
+  <aside class="sidebar" id="appSidebar">
+  <button type="button"
+          id="sidebarToggle"
+          class="sidebar-toggle"
+          aria-label="Thu gọn hoặc mở rộng thanh menu"
+          aria-expanded="false">❮</button>
+
+  <div class="app-brand">
+    <div class="app-logo"><svg class="magasin-logo" viewBox="0 0 100 100" aria-label="MAGASIN" role="img">
+      <path fill="#ffffff" d="M18 82V53L28 22Q30 16 36 16H64Q70 16 72 22L82 53V82H67V50L61 29H39L33 50V82H18Z"/>
+      <path fill="#0b9eb7" d="M37 47Q38 40 43 37H57Q62 40 63 47L66 57Q50 59 34 57L37 47Z"/>
+      <path fill="#ffffff" d="M33 57Q50 60 67 57V69Q50 72 33 69V57Z"/>
+    </svg></div>
+    <div class="brand-text">
+      <strong>MAGASIN</strong>
+      <span>Hệ thống nội bộ</span>
+    </div>
+  </div>
+
+  <nav class="menu" id="appMenu">
+
+    <!-- MENU NHÂN VIÊN -->
+    <div class="sidebar-role-group staff-sidebar-group" data-role-group="STAFF">
+      <button type="button" class="menu-item staff-only-menu" data-staff-task-sidebar="schedule">
+        <span class="menu-icon">📅</span><span class="menu-text">Lịch làm</span>
+      </button>
+
+      <button type="button" class="menu-item staff-only-menu" data-staff-task-sidebar="attendance">
+        <span class="menu-icon">⏱️</span><span class="menu-text">Chấm công</span>
+      </button>
+
+      <button type="button" class="menu-item staff-only-menu" data-staff-task-sidebar="shift-swap">
+        <span class="menu-icon">🔄</span><span class="menu-text">Đổi ca</span>
+      </button>
+
+      <button type="button" class="menu-item staff-only-menu" data-page="inventory">
+        <span class="menu-icon">📦</span><span class="menu-text">Tồn hàng</span>
+      </button>
+
+      <button type="button" class="menu-item staff-only-menu" data-page="account">
+        <span class="menu-icon">👤</span><span class="menu-text">Thông tin cá nhân</span>
+      </button>
+    </div>
+
+    <!-- MENU QUẢN LÝ / CHỦ -->
+    <div class="sidebar-role-group manager-sidebar-group" data-role-group="MANAGER">
+      <button type="button" class="menu-item manager-only-menu" data-page="dashboard">
+        <span class="menu-icon">🏠</span><span class="menu-text">Tổng quan</span>
+      </button>
+
+      <button type="button" class="menu-item manager-only-menu" data-page="inventory">
+        <span class="menu-icon">📦</span><span class="menu-text">Kho hàng</span>
+      </button>
+
+      <button type="button" class="menu-item manager-only-menu" data-page="attendance">
+        <span class="menu-icon">⏱️</span><span class="menu-text">Chấm công</span>
+      </button>
+
+      <button type="button" class="menu-item manager-only-menu" data-page="orders">
+        <span class="menu-icon">🛒</span><span class="menu-text">Đơn hàng</span>
+      </button>
+
+      <button type="button" class="menu-item manager-only-menu" data-page="reports">
+        <span class="menu-icon">📊</span><span class="menu-text">Báo cáo</span>
+      </button>
+
+      <button type="button" class="menu-item manager-only-menu" data-page="settings">
+        <span class="menu-icon">⚙️</span><span class="menu-text">Cài đặt</span>
+      </button>
+
+      <button type="button" class="menu-item manager-only-menu" data-page="account">
+        <span class="menu-icon">👤</span><span class="menu-text">Thông tin cá nhân</span>
+      </button>
+    </div>
+  </nav>
+
+  <div class="sidebar-bottom">
+    <button type="button" class="user-box user-account-button" id="userAccountButton" aria-label="Mở thông tin tài khoản">
+      <div class="avatar" id="userAvatar">U</div>
+      <div class="user-info">
+        <strong id="userName">Người dùng</strong>
+        <span id="userRole">Nhân viên</span>
+      </div>
+      <span class="user-account-arrow">›</span>
+    </button>
+
+    <button type="button" class="logout-button" id="sidebarLogoutButton">Đăng xuất</button>
+  </div>
+</aside>
+
+  <main class="main-area">
+    <header class="topbar magasin-topbar">
+      <div class="topbar-leading">
+        <button type="button"
+                id="headerMenuToggle"
+                class="header-menu-toggle"
+                aria-label="Mở menu"
+                aria-expanded="false">
+          <span></span><span></span><span></span>
+        </button>
+        <div class="topbar-title-block">
+          <h2 id="pageTitle">Tổng quan</h2>
+          <p id="pageDescription">Tổng quan hoạt động hệ thống</p>
+        </div>
+      </div>
+      <div class="topbar-actions" aria-hidden="true">
+        <div class="topbar-user-dot"></div>
+      </div>
+    </header>
+
+    <section id="pageContent" class="page-content">
+      <h2>Chào mừng đến với MAGASIN</h2>
+      <p>Hãy chọn chức năng từ menu bên trái.</p>
+    </section>
+  </main>
+
+</div>
+<!-- MAGASIN ARCH-01 / V4: partial JS thuần -->
+<script>
+<?!= include('_auth'); ?>
+</script>
+<script>
+<?!= include('_schedule'); ?>
+</script>
+<script>
+<?!= include('_attendance'); ?>
+</script>
+<script>
+<?!= include('_management'); ?>
+</script>
+
+</body>
+</html>

@@ -1,0 +1,1822 @@
+MAGASIN PROJECT MAP
+BẢN ĐỒ TOÀN BỘ HỆ THỐNG WEBAPP MAGASIN
+Phiên bản: 3.3
+Ngày cập nhật: 26/08/2026
+
+================================================================
+1. MỤC ĐÍCH
+================================================================
+
+Đây là tài liệu “bản đồ kiến trúc” của MAGASIN WebApp.
+
+Dùng để:
+- Hiểu toàn bộ cấu trúc project.
+- Xác định module chịu trách nhiệm cho từng chức năng.
+- Xác định dependency khi sửa code.
+- Giúp các lần làm việc sau chỉ cần gửi Project Map + module liên quan.
+- Tránh phải gửi toàn bộ 15 file .gs cho mọi yêu cầu.
+
+NGUYÊN TẮC:
+- Tất cả file .gs vẫn nằm trong MỘT Google Apps Script Project.
+- Các file .gs dùng chung phạm vi.
+- Tên file được Việt hóa 100%.
+- Tên hàm hiện tại được giữ nguyên để không làm hỏng lời gọi.
+- Không tự ý đổi tên Sheet, cột, hàm hoặc biến đang được sử dụng.
+- Khi sửa một module, chỉ lấy thêm module phụ thuộc trực tiếp nếu cần.
+
+================================================================
+2. CẤU TRÚC PROJECT
+================================================================
+
+MAGASIN WEBAPP
+|
+|-- 01_Cấu_hình_hệ_thống.gs
+|-- 02_Nền_tảng_hệ_thống.gs
+|-- 03_Đăng_nhập_xác_thực.gs
+|-- 04_Khôi_phục_mật_khẩu.gs
+|-- 05_Phiên_đăng_nhập.gs
+|-- 06_Hồ_sơ_nhân_viên.gs
+|-- 07_Phân_quyền.gs
+|-- 08_Quản_lý_người_dùng.gs
+|-- 09_Lịch_làm_việc.gs
+|-- 10_Chấm_công.gs
+|-- 11_Đổi_ca.gs
+|-- 12_KPI.gs
+|-- 13_Kho_hàng.gs
+|-- 14_Báo_cáo.gs
+|-- 15_Ứng_dụng_web.gs
+|
+`-- Index.html
+
+Không giữ Code.gs cũ có cùng hàm trong project khi đã tách module.
+
+================================================================
+3. BẢNG 15 MODULE
+================================================================
+
+01 — CẤU HÌNH HỆ THỐNG
+Chức năng:
+- Hằng số dùng chung.
+- USER_HEADERS.
+- OPERATIONAL_SHEET_DEFS.
+- Prefix phiên đăng nhập.
+- Thời hạn phiên.
+- Prefix reset mật khẩu.
+- Thời hạn reset mật khẩu.
+
+Các Sheet nghiệp vụ được định nghĩa:
+- Lịch làm việc
+- Chấm công
+- Bậc nhân viên
+- Đổi ca
+- KPI
+
+02 — NỀN TẢNG HỆ THỐNG
+Chức năng:
+- Các hàm dùng chung.
+- Truy cập Spreadsheet.
+- Tạo Sheet nghiệp vụ.
+- Chuẩn hóa dữ liệu.
+- Trả lỗi.
+- Băm mật khẩu.
+- Kiểm tra cấu trúc Sheet.
+
+Đây là module nền; nhiều module khác phụ thuộc.
+
+02A — NGUỒN DỮ LIỆU CHÍNH THỨC
+===============================================================
+
+Spreadsheet dữ liệu duy nhất của MAGASIN:
+- Tên: MAGASIN - Cơ sở dữ liệu tài khoản
+- Spreadsheet ID: 1g5U4mSPvpTYC_0P0PrZEK95bPE6s-MpcV256wT0iMO8
+- URL:
+  https://docs.google.com/spreadsheets/d/1g5U4mSPvpTYC_0P0PrZEK95bPE6s-MpcV256wT0iMO8/edit
+
+Quy tắc:
+- Nhân viên và quản lý dùng CHUNG Spreadsheet.
+- Nhân viên và quản lý dùng CHUNG tab "Chấm công".
+- 02_Nền_tảng_hệ_thống.gs là nơi xác định nguồn dữ liệu.
+- MAGASIN_DATABASE_SPREADSHEET_ID là nguồn sự thật duy nhất.
+- MAGASIN_USERS_SHEET_ID và BREWFLOW_USERS_SHEET_ID chỉ còn giữ tương thích.
+- Không tạo Spreadsheet mới nếu nguồn dữ liệu chính đã tồn tại.
+- Hàm kiemTraNguonDuLieuMAGASIN_() dùng để kiểm tra thực tế.
+
+03 — ĐĂNG NHẬP XÁC THỰC
+Chức năng:
+- registerUser
+- verifyEmail
+- login
+
+Luồng:
+Đăng ký -> xác thực email -> ACTIVE -> đăng nhập.
+
+Tài khoản đăng ký mới:
+- Role mặc định STAFF.
+
+04 — KHÔI PHỤC MẬT KHẨU
+Chức năng:
+- requestPasswordReset
+- resetPassword
+- generateTemporaryPassword_
+
+Luồng:
+Email -> mật khẩu tạm -> link reset -> mật khẩu mới.
+
+05 — PHIÊN ĐĂNG NHẬP
+Chức năng:
+- createSession_
+- getSession
+- logout
+- requireSessionUser_
+
+SESSION_DURATION hiện tại:
+- 21600 giây.
+
+CƠ CHẾ KHÔI PHỤC PHIÊN TRÊN TRÌNH DUYỆT:
+- localStorage key: magasin_session_token
+- Khi tải lại WebApp, Index.html đọc token và gọi getSession(token).
+- Nếu hợp lệ, hệ thống mở lại WebApp mà không yêu cầu đăng nhập lại.
+- getSession() gia hạn TTL của phiên khi phiên được khôi phục thành công.
+- Khi đăng xuất, token phía trình duyệt được xóa cùng trạng thái trang.
+
+06 — HỒ SƠ NHÂN VIÊN
+Chức năng:
+- findUserRowByUsername_
+- getCurrentEmployeeProfile
+- updateCurrentEmployeeProfile
+- changeCurrentEmployeePassword
+
+Dữ liệu:
+- Tên đăng nhập
+- Họ tên
+- Email
+- Số điện thoại
+- Vai trò
+- Trạng thái
+- Phạm vi truy cập
+
+07 — PHÂN QUYỀN
+Chức năng:
+- normalizeRole_
+- roleLabel_
+- getRolePermissions_
+- getMyAccess
+- requireOwner_
+
+04 vai trò:
+- OWNER = Chủ cửa hàng
+- INVENTORY_MANAGER = Quản lý kho
+- STORE_MANAGER = Quản lý cửa hàng
+- STAFF = Nhân viên
+
+Phạm vi truy cập:
+- Sheet Người dùng, cột P.
+
+08 — QUẢN LÝ NGƯỜI DÙNG
+Chức năng:
+- getUsersForManagement
+- updateManagedUser
+
+Dành cho OWNER:
+- Xem tài khoản.
+- Đổi vai trò.
+- Đổi trạng thái.
+- Đổi phạm vi truy cập.
+
+Không tạo tài khoản mới chỉ vì đổi role.
+
+09 — LỊCH LÀM VIỆC
+Chức năng:
+- scheduleDateKey_
+- getMySchedule
+- registerShift
+- cancelShift
+
+Sheet:
+- Lịch làm việc.
+
+Cho phép:
+- Nhiều ca trong cùng ngày.
+- Mỗi ca là một dòng.
+
+Trạng thái:
+- PENDING
+- APPROVED
+- CANCELLED
+
+10 — CHẤM CÔNG
+Vai trò:
+- Module nghiệp vụ chấm công của nhân viên.
+- Nhân viên có thể tự nhập ngày, chi nhánh, giờ vào và giờ ra rồi xác nhận.
+- Lịch sử chấm công có lọc theo khoảng ngày.
+- Bản ghi được sắp xếp mới nhất trước.
+- Bản ghi cá nhân được phép sửa trong 24 giờ kể từ thời điểm xác nhận.
+- Quản lý cửa hàng và Chủ cửa hàng có thể xem dữ liệu chấm công theo phạm vi được phép.
+
+Sheet:
+- Chấm công.
+- Bậc nhân viên.
+
+Cấu trúc Sheet Chấm công hiện tại:
+A Id
+B Ngày
+C Người dùng
+D Cửa hàng
+E Check-in
+F Check-out
+G Trạng thái
+H Đi muộn phút
+I Về sớm phút
+J Ghi chú
+K Ngày tạo
+L Họ tên
+M Ca
+N Bậc NV
+O Đơn giá giờ
+P Giờ công
+Q Thành tiền
+R Giờ ca bắt đầu
+S Giờ ca kết thúc
+
+Luồng NHÂN VIÊN:
+1. Mở Chấm công.
+2. Chọn ngày chấm công.
+3. Chọn chi nhánh.
+4. Chọn giờ vào.
+5. Chọn giờ ra.
+6. Xác nhận chấm công.
+7. Hệ thống ghi bản ghi vào Sheet Chấm công.
+8. Tính giờ công, đi muộn/về sớm và thành tiền.
+9. Hiển thị bản ghi trong lịch sử.
+10. Có thể sửa bản ghi trong 24 giờ kể từ thời điểm xác nhận.
+
+Luồng LỊCH SỬ:
+- Có bộ lọc Từ ngày / Đến ngày.
+- Dữ liệu được lọc theo username của nhân viên.
+- Dữ liệu sắp xếp mới nhất trước.
+- Có trạng thái có thể sửa / đã hết hạn sửa.
+- Tổng giờ công, tổng tiền công và số ca được tính theo đúng khoảng ngày đang tìm kiếm, không cố định theo “hôm nay”.
+
+MÚI GIỜ:
+- Dùng múi giờ Việt Nam / Asia/Ho_Chi_Minh.
+- Hiển thị giờ theo định dạng 24 giờ HH:mm.
+- Không dùng dạng AM/PM hoặc “CH”.
+
+GIỚI HẠN SỬA:
+- Mốc 24 giờ lấy từ thời điểm xác nhận lưu tại cột K — Ngày tạo.
+- Kiểm tra giới hạn ở backend.
+- Không chỉ dựa vào nút Sửa ở frontend.
+
+GHI DỮ LIỆU AN TOÀN:
+- Khi tạo/cập nhật bản ghi có sử dụng LockService để hạn chế xung đột ghi.
+- Gọi SpreadsheetApp.flush() sau thao tác ghi.
+- Không tạo bản ghi trùng hoàn toàn theo ngày + người dùng + chi nhánh + giờ vào/ra.
+
+BẬC NHÂN VIÊN:
+- Lấy từ Sheet Bậc nhân viên.
+- Nếu chưa có dữ liệu, logic hiện tại có thể khởi tạo Bậc 1 với đơn giá 16.000 đồng/giờ.
+
+QUẢN LÝ:
+- STORE_MANAGER và OWNER có quyền xem dữ liệu quản lý.
+- Có thể lọc từ ngày đến ngày.
+- Có thể lọc theo chi nhánh.
+- Có tổng giờ công.
+- Có tổng tiền công.
+- Có số nhân viên.
+- Có số lượt chấm công.
+- Có tổng hợp theo ngày và chi nhánh.
+- Dữ liệu phải tôn trọng Phạm vi truy cập.
+
+CÁC HÀM BACKEND QUAN TRỌNG HIỆN TẠI:
+- ensureAttendanceStructure_
+- ensureEmployeeGrade_
+- parseClockTime_
+- findCurrentScheduledShift_
+- findScheduledShiftForDate_
+- attendanceMoney_
+- attendanceRow_
+- checkInEmployee
+- checkOutEmployee
+- calculateAttendanceMetrics_
+- getAttendanceOptions
+- getAttendanceRecordById_
+- formatVietnamDateKey_
+- formatVietnamTime_
+- vietNamDateTime_
+- createAttendanceRecord
+- updateAttendanceRecord
+- getAttendanceManagement
+- getAttendanceHistory
+- managerUpdateAttendanceRecord
+- managerDeleteAttendanceRecord
+- sendAttendanceManagerNotice_
+
+GIAO DIỆN NHÂN VIÊN V29:
+- Dashboard tổng quan nằm ở đầu trang Chấm công.
+- Dashboard hiển thị Tổng giờ công, Tổng tiền công, Số ca và Giờ công/ca.
+- Các chỉ số dashboard lấy theo đúng khoảng ngày đang tra cứu.
+- Ô Giờ vào và Giờ ra dùng MỘT dropdown duy nhất cho mỗi mốc giờ.
+- Dropdown có 48 lựa chọn từ 00:00 đến 23:30, bước 30 phút.
+- Khi sửa dữ liệu cũ có phút khác 00/30, hệ thống bổ sung lựa chọn "(đã lưu)" để không tự làm thay đổi dữ liệu cũ.
+- Backend vẫn nhận chuỗi HH:mm nên không cần thay đổi API createAttendanceRecord/updateAttendanceRecord.
+- Lưu trạng thái form mới qua magasin_page_state với attendanceCheckInTime và attendanceCheckOutTime.
+
+GHI CHÚ KỸ THUẬT HIỆN TẠI:
+- getAttendanceHistory() hiện là một định nghĩa duy nhất trong module Chấm công đang sử dụng.
+- Frontend gọi getAttendanceHistory() và render lịch sử sau khi nhận dữ liệu.
+- Backend tiếp tục trả giờ theo HH:mm và thời điểm xác nhận theo chuỗi Việt Nam.
+
+
+10A — QUẢN LÝ CHẤM CÔNG V32
+BẢN SỬA QUAN TRỌNG:
+- Báo cáo quản lý đọc lại Vai trò và Phạm vi truy cập trực tiếp từ Sheet Người dùng ở mỗi lần tải dữ liệu.
+- Không phụ thuộc accessScope cũ đang lưu trong session.
+- OWNER xem toàn bộ; STORE_MANAGER xem đúng phạm vi.
+- Chuẩn hóa mã cửa hàng trước khi so khớp bằng attendanceScopeAllows_().
+- Chuẩn hóa ngày bằng attendanceFilterDateKey_() để chấp nhận Date, YYYY-MM-DD và DD/MM/YYYY.
+- Trả diagnostics: tổng bản ghi nguồn, số bản ghi khớp ngày, chi nhánh và phạm vi truy cập.
+- Danh sách chi nhánh hiển thị được lấy từ dữ liệu đã lọc theo quyền.
+- Frontend không giữ giá trị chi nhánh cũ nếu không còn nằm trong danh sách được phép.
+- Ngày mặc định của bộ lọc dùng trực tiếp múi giờ Asia/Ho_Chi_Minh, không dùng toISOString() để tránh lệch ngày.
+- Không thay đổi cấu trúc Sheet Chấm công.
+
+10B — QUẢN LÝ CHẤM CÔNG V33
+- Thêm endpoint mới: getAttendanceManagementV33().
+- Đọc trực tiếp Spreadsheet ID chuẩn MAGASIN_DATABASE_SPREADSHEET_ID.
+- Không phụ thuộc getAttendanceManagement() cũ để tránh shadow/duplicate/deployment cũ.
+- Trả diagnostics nguồn dữ liệu: Spreadsheet ID, tên Spreadsheet, tab, số dòng/cột.
+- Chuẩn hóa vai trò MANAGER / STORE_MANAGER / OWNER.
+- Frontend quản lý gọi endpoint V33.
+- Mục tiêu: nhân viên và quản lý chắc chắn đọc cùng tab Chấm công.
+
+11 — ĐỔI CA
+Chức năng:
+- submitShiftSwap
+- getMyShiftSwapRequests
+
+Sheet:
+- Đổi ca.
+
+12 — KPI
+Chức năng:
+- getMyKpi
+
+Sheet:
+- KPI.
+
+13 — KHO HÀNG
+Trạng thái:
+- Module mở rộng.
+- Chưa tự thêm nghiệp vụ chưa có trong nguồn hiện tại.
+
+Định hướng:
+- Nhập kho
+- Xuất kho
+- Chuyển kho
+- Kiểm kê
+- Điều chỉnh tồn
+- Tồn kho
+- Lịch sử biến động
+
+14 — BÁO CÁO
+Trạng thái:
+- Module tổng hợp dữ liệu.
+- Không nên ghi dữ liệu gốc vào đây.
+
+Định hướng:
+- Báo cáo chấm công
+- Giờ công
+- Tiền công
+- Nhập/Xuất/Tồn
+- KPI
+- Theo chi nhánh
+- Theo khoảng thời gian
+
+15 — ỨNG DỤNG WEB
+Chức năng:
+- doGet
+
+Nhiệm vụ:
+- Gọi ensureOperationalSheets_().
+- Trả giao diện Index.html.
+- Thiết lập viewport.
+- Đặt title MAGASIN.
+
+Nên giữ module này mỏng.
+
+================================================================
+4. CẤU TRÚC SHEET
+================================================================
+
+SHEET NGƯỜI DÙNG
+A Id
+B Tên đăng nhập
+C Họ tên
+D Email
+E Số điện thoại
+F Muối mật khẩu
+G Mã băm mật khẩu
+H Vai trò
+I Trạng thái
+J Muối xác thực
+K Mã xác thực
+L Hết hạn mã
+M Số lần thử
+N Ngày tạo
+O Ngày xác thực
+P Phạm vi truy cập
+
+SHEET LỊCH LÀM VIỆC
+A Id
+B Ngày
+C Ca
+D Giờ bắt đầu
+E Giờ kết thúc
+F Cửa hàng
+G Người dùng
+H Trạng thái
+I Người duyệt
+J Ngày duyệt
+K Ghi chú
+
+SHEET CHẤM CÔNG
+A Id
+B Ngày
+C Người dùng
+D Cửa hàng
+E Check-in
+F Check-out
+G Trạng thái
+H Đi muộn phút
+I Về sớm phút
+J Ghi chú
+K Ngày tạo
+L Họ tên
+M Ca
+N Bậc NV
+O Đơn giá giờ
+P Giờ công
+Q Thành tiền
+R Giờ ca bắt đầu
+S Giờ ca kết thúc
+
+SHEET BẬC NHÂN VIÊN
+A Id
+B Người dùng
+C Họ tên
+D Bậc NV
+E Đơn giá giờ
+F Trạng thái
+G Ngày cập nhật
+
+Mức mặc định code hiện tại:
+- Bậc 1
+- 16.000 đồng/giờ
+
+Không tự suy đoán mức khác.
+
+SHEET ĐỔI CA
+A Id
+B Ngày gửi
+C Người gửi
+D Ca hiện tại
+E Ca đề nghị
+F Cửa hàng
+G Lý do
+H Trạng thái
+I Người duyệt
+J Ngày duyệt
+K Ghi chú
+
+SHEET KPI
+A Id
+B Kỳ
+C Người dùng
+D Cửa hàng
+E Chỉ tiêu
+F Kết quả
+G Trọng số
+H Điểm
+I Người đánh giá
+J Ngày cập nhật
+K Ghi chú
+
+================================================================
+5. QUYỀN TRUY CẬP
+================================================================
+
+OWNER:
+- Toàn bộ hệ thống.
+- Quản lý tài khoản.
+- Toàn bộ báo cáo.
+- Có thể xem toàn bộ phạm vi.
+
+INVENTORY_MANAGER:
+- Tổng quan.
+- Kho hàng.
+- Báo cáo liên quan.
+
+STORE_MANAGER:
+- Tổng quan.
+- Kho hàng.
+- Đơn hàng.
+- Báo cáo.
+- Quản lý chấm công theo phạm vi.
+
+STAFF:
+- Tổng quan.
+- Lịch làm việc.
+- Chấm công.
+- Đổi ca.
+- KPI/hiệu suất.
+- Kho hàng.
+- Nhập tồn hàng hóa.
+- Kiểm kê dụng cụ.
+
+Các tác vụ nhân viên nằm cùng cấp trong sidebar, không phải submenu của Kho hàng.
+
+================================================================
+6. PHẠM VI TRUY CẬP
+================================================================
+
+Cột:
+- P — Phạm vi truy cập
+
+Định dạng:
+- CN01
+- CN01,CN02
+- ALL
+
+Hàm liên quan:
+- parseScopeList_
+- scopeAllows_
+
+Nguyên tắc:
+- STAFF bị giới hạn theo phạm vi.
+- STORE_MANAGER bị giới hạn theo phạm vi.
+- OWNER có thể xem toàn bộ khi phạm vi là ALL.
+
+================================================================
+7. ĐẶC TẢ CHẤM CÔNG
+================================================================
+
+CHECK-IN:
+- Kiểm tra phiên.
+- Kiểm tra ca đã duyệt nếu có.
+- Xác định chi nhánh.
+- Lấy bậc nhân viên.
+- Lấy đơn giá giờ.
+- Lưu giờ vào.
+- Tính đi muộn.
+- Lưu giờ ca dự kiến.
+
+CHECK-OUT:
+- Kiểm tra có ca đang mở.
+- Lưu giờ ra.
+- Tính giờ công.
+- Tính tiền công.
+- Tính về sớm.
+- Đặt trạng thái COMPLETED.
+
+QUẢN LÝ:
+- OWNER hoặc STORE_MANAGER.
+- Lọc từ ngày đến ngày.
+- Lọc chi nhánh.
+- Tổng giờ công.
+- Tổng tiền công.
+- Số nhân viên.
+- Số lượt chấm công.
+- Có tổng hợp ngày + chi nhánh.
+
+================================================================
+8. ĐẶC TẢ LỊCH LÀM VIỆC
+================================================================
+
+Mỗi nhân viên:
+- Có thể có nhiều ca trong một ngày.
+- Mỗi ca là một dòng Sheet riêng.
+
+Giao diện:
+- 7 ngày trong tuần.
+- Ca tách thành từng ô.
+- Màu theo Sáng/Chiều/Tối.
+- Có trạng thái.
+- Hỗ trợ desktop/mobile.
+
+Quan hệ:
+Lịch làm việc
+-> ca đã duyệt
+-> được dùng làm thông tin ca dự kiến
+-> hỗ trợ chấm công.
+
+================================================================
+9. ĐỔI CA
+================================================================
+
+Nhân viên:
+- Gửi yêu cầu.
+- Chọn ca hiện tại.
+- Chọn ca đề nghị.
+- Chọn cửa hàng.
+- Nhập lý do.
+
+Trạng thái ban đầu:
+- PENDING
+
+Không coi PENDING là APPROVED.
+
+================================================================
+10. KPI
+================================================================
+
+Dữ liệu:
+- Kỳ
+- Người dùng
+- Cửa hàng
+- Chỉ tiêu
+- Kết quả
+- Trọng số
+- Điểm
+- Người đánh giá
+- Ngày cập nhật
+- Ghi chú
+
+Hiện có:
+- Xem KPI cá nhân.
+
+Không tự tạo công thức KPI mới nếu chưa có yêu cầu.
+
+================================================================
+11. PRINT / IN ẤN
+================================================================
+
+Thiết bị dự kiến:
+- Sapo TL31E
+
+Nhu cầu:
+- In phiếu.
+- In tem.
+- In barcode/QR.
+- In báo cáo.
+
+Giai đoạn đầu:
+- In qua trình duyệt.
+
+Giai đoạn sau:
+- Có thể phát triển Print Bridge qua LAN/USB.
+
+WebApp hiện không phải POS bán hàng chính.
+
+================================================================
+12. FRONTEND INDEX.HTML
+================================================================
+
+Index.html chịu trách nhiệm:
+- Đăng nhập.
+- Đăng ký.
+- Xác thực email.
+- Quên mật khẩu.
+- Reset mật khẩu.
+- App shell.
+- Sidebar.
+- Phân quyền giao diện.
+- Hồ sơ.
+- Lịch.
+- Chấm công.
+- Đổi ca.
+- KPI.
+- Báo cáo chấm công.
+- Responsive mobile.
+
+Giao diện Chấm công hiện tại:
+- Form nhập ngày chấm công.
+- Chọn chi nhánh.
+- Nhập giờ vào và giờ ra theo 24 giờ.
+- Nút xác nhận chấm công.
+- Lịch sử chấm công.
+- Bộ lọc khoảng ngày.
+- Hiển thị tổng giờ công, tổng tiền công và số ca theo khoảng lọc.
+- Hỗ trợ sửa trong 24 giờ.
+
+Các hàm frontend quan trọng:
+
+Xác thực/khởi tạo:
+- init
+- openApp
+- handleLogout
+- setAppButton
+- enhancePasswordFields
+
+Phân quyền:
+- normalizedClientRole
+- applyRoleBasedUI
+- syncAccessFromServer
+- refreshUserHeader
+
+Điều hướng:
+- showPage
+- renderSettingsHub
+- renderUserManagement
+- openAccountSettings
+- renderAccountHub
+- renderAccountEmail
+- renderAccountPhone
+- renderAccountPassword
+
+Nhân viên:
+- employeeSetPage_
+- employeeModuleShell_
+- renderStaffTaskPlaceholder_
+- renderBasicStaffTasks_
+- renderEmployeeSchedule_
+- renderEmployeeWeekSchedule_
+- renderEmployeeAttendance_
+- renderEmployeeShiftSwap_
+- renderEmployeeKpi_
+- renderEmployeeStockEntry_
+- renderEmployeeEquipmentCheck_
+
+Lịch:
+- getEmployeeWeekStart_
+- employeeDateKey_
+- loadEmployeeSchedule_
+- getShiftPeriodClass_
+- getShiftStatusLabel_
+
+Chấm công:
+- renderEmployeeAttendance_
+- loadAttendanceHistory_
+- renderAttendanceManagement_
+- loadAttendanceManagement_
+- formatAttendanceTime_
+- formatMoney_
+
+TRẠNG THÁI PHIÊN / GIAO DIỆN ĐƯỢC LƯU TRÊN TRÌNH DUYỆT:
+- magasin_session_token
+- magasin_current_page
+- magasin_page_state
+
+Cơ chế:
+- Tự khôi phục phiên sau F5/reload nếu session server còn hợp lệ.
+- Khôi phục trang/module đang mở.
+- Khôi phục các trường giao diện an toàn của module.
+- Khôi phục vị trí cuộn của vùng nội dung.
+- Không lưu mật khẩu vào page_state.
+
+================================================================
+13. DEPENDENCY MAP
+================================================================
+
+02_Nền_tảng_hệ_thống
+|
++--> 03_Đăng_nhập_xác_thực
++--> 04_Khôi_phục_mật_khẩu
++--> 05_Phiên_đăng_nhập
++--> 06_Hồ_sơ_nhân_viên
++--> 07_Phân_quyền
++--> 08_Quản_lý_người_dùng
++--> 09_Lịch_làm_việc
++--> 10_Chấm_công
++--> 11_Đổi_ca
++--> 12_KPI
++--> 13_Kho_hàng
++--> 14_Báo_cáo
++--> 15_Ứng_dụng_web
+
+07_Phân_quyền
+|
++--> 06_Hồ_sơ_nhân_viên
++--> 08_Quản_lý_người_dùng
++--> 09_Lịch_làm_việc
++--> 10_Chấm_công
++--> 11_Đổi_ca
++--> 12_KPI
++--> 13_Kho_hàng
++--> 14_Báo_cáo
+
+05_Phiên_đăng_nhập
+|
++--> 06_Hồ_sơ_nhân_viên
++--> 09_Lịch_làm_việc
++--> 10_Chấm_công
++--> 11_Đổi_ca
++--> 12_KPI
+
+09_Lịch_làm_việc
+|
++--> 10_Chấm_công
+
+10_Chấm_công
+|
++--> 14_Báo_cáo
+
+12_KPI
+|
++--> 14_Báo_cáo (khi mở rộng)
+
+13_Kho_hàng
+|
++--> 14_Báo_cáo
+
+15_Ứng_dụng_web
+|
++--> 02_Nền_tảng_hệ_thống
++--> Index.html
+
+================================================================
+14. QUY TẮC SỬA MODULE
+================================================================
+
+Khi người dùng yêu cầu sửa một module:
+
+Bước 1:
+Đọc PROJECT MAP.
+
+Bước 2:
+Đọc module chính.
+
+Bước 3:
+Xác định dependency.
+
+Bước 4:
+Chỉ yêu cầu thêm dependency cần thiết.
+
+Bước 5:
+Không sửa module không liên quan.
+
+Bước 6:
+Kiểm tra:
+- Trùng tên hàm.
+- Trùng biến toàn cục.
+- Sai tên Sheet.
+- Sai tên cột.
+- Sai quyền.
+- Sai phạm vi.
+
+Bước 7:
+Xuất lại module đã sửa.
+
+================================================================
+15. KHI NÀO CẦN GỬI FILE
+================================================================
+
+SỬA NHỎ:
+- Project Map
+- Module đang sửa
+
+Ví dụ:
+- 10_Chấm_công.gs
+
+SỬA CHẤM CÔNG CÓ LIÊN QUAN LỊCH:
+- Project Map
+- 10_Chấm_công.gs
+- 09_Lịch_làm_việc.gs
+- 07_Phân_quyền.gs
+- 02_Nền_tảng_hệ_thống.gs
+
+SỬA GIAO DIỆN:
+- Project Map
+- Index.html
+- Backend module tương ứng nếu có gọi server.
+
+THAY ĐỔI KIẾN TRÚC:
+- Project Map
+- toàn bộ module liên quan.
+
+Không mặc định gửi cả 15 file cho mọi yêu cầu.
+
+================================================================
+16. QUY TẮC PHÁT TRIỂN “KHÔNG THAY ĐỔI CẤU TRÚC”
+================================================================
+
+Khi có yêu cầu:
+“Không thay đổi cấu trúc”
+
+Phải hiểu:
+- Không xây lại.
+- Không xóa chức năng cũ.
+- Không đổi Sheet.
+- Không đổi vị trí cột.
+- Không đổi tên hàm hiện tại nếu không bắt buộc.
+- Không làm ảnh hưởng module khác.
+- Ưu tiên thêm hàm.
+- Ưu tiên bổ sung UI.
+- Ưu tiên wrapper nếu cần.
+
+================================================================
+17. QUY TẮC GOOGLE SHEETS
+================================================================
+
+Không dùng Sheet Người dùng cho:
+- Chấm công.
+- Lịch.
+- Đổi ca.
+- KPI.
+- Kho.
+
+Các module nghiệp vụ dùng Sheet riêng.
+
+Hệ thống hiện có cơ chế:
+- tự tạo Sheet nghiệp vụ nếu chưa có.
+- tạo header.
+- đóng băng hàng đầu.
+- định dạng header.
+
+================================================================
+18. AN TOÀN KHI TÁCH MODULE
+================================================================
+
+Đã tách Code.gs thành 15 file.
+
+Khi triển khai:
+1. Sao lưu Code.gs cũ.
+2. Tạo 15 file .gs mới.
+3. Dán từng module.
+4. Không để Code.gs cũ còn các hàm trùng.
+5. Lưu project.
+6. Kiểm tra lỗi cú pháp.
+7. Chạy Web App.
+8. Kiểm tra đăng nhập.
+9. Kiểm tra phân quyền.
+10. Kiểm tra lịch.
+11. Kiểm tra chấm công.
+12. Kiểm tra đổi ca.
+13. Kiểm tra KPI.
+
+================================================================
+19. TRẠNG THÁI HIỆN TẠI
+================================================================
+
+Đã có:
+- Đăng nhập.
+- Đăng ký.
+- Xác thực email.
+- Khôi phục mật khẩu.
+- Đổi mật khẩu.
+- Session.
+- Hồ sơ nhân viên.
+- 4 vai trò.
+- Phạm vi truy cập.
+- Quản lý người dùng.
+- Lịch làm việc.
+- Chấm công.
+- Đổi ca.
+- KPI.
+- Khung kho.
+- Tổng hợp chấm công quản lý.
+- Giao diện mobile.
+
+CHẤM CÔNG V22 ĐÃ NÂNG CẤP:
+- Nhập ngày/chi nhánh/giờ vào/giờ ra thủ công.
+- Xác nhận chấm công.
+- Hiển thị giờ 24h theo múi giờ Việt Nam.
+- Lưu thời điểm xác nhận.
+- Sửa trong 24 giờ.
+- Lọc lịch sử theo khoảng ngày.
+- Sắp xếp mới nhất trước.
+- Tổng giờ/tổng tiền/số ca theo khoảng lọc.
+- Quản lý xem tổng hợp theo khoảng thời gian và chi nhánh.
+- Có LockService + SpreadsheetApp.flush() khi ghi.
+
+Đã nâng cấp:
+- Quản lý chấm công V30: dashboard theo cửa hàng/ngày, chỉnh sửa, xóa mềm và email thông báo.
+
+Đang mở rộng:
+- Kho hàng.
+- Kiểm kê dụng cụ.
+- Nhập tồn.
+- Duyệt lịch.
+- Duyệt đổi ca.
+- KPI tự động.
+- Báo cáo đầy đủ.
+- Tính lương toàn hệ thống.
+- In tự động.
+
+20. NGUYÊN TẮC CẬP NHẬT PROJECT MAP
+================================================================
+
+Khi project thay đổi:
+- Thêm module -> cập nhật mục Cấu trúc Project.
+- Thêm Sheet -> cập nhật mục Cấu trúc Sheet.
+- Thêm role -> cập nhật mục Quyền.
+- Thêm hàm quan trọng -> cập nhật mục Hàm Backend/Frontend.
+- Thay đổi dependency -> cập nhật Dependency Map.
+- Thay đổi quy trình nghiệp vụ -> cập nhật module tương ứng.
+
+Không ghi vào Project Map những chức năng chưa được triển khai thực tế.
+
+================================================================
+22. NHẬT KÝ CẬP NHẬT PROJECT MAP
+================================================================
+
+24/08/2026 — Chấm công V29:
+- Nâng cấp giao diện Chấm công theo hướng dashboard.
+- Đưa Tổng giờ công, Tổng tiền công và Số ca lên đầu trang.
+- Bổ sung Giờ công/ca trung bình.
+- Dashboard tự cập nhật theo khoảng ngày đang tra cứu.
+- Thay 4 ô chọn giờ/phút riêng thành 1 dropdown cho Giờ vào và 1 dropdown cho Giờ ra.
+- Mỗi dropdown có 48 mốc 00:00 → 23:30, bước 30 phút.
+- Khi chỉnh sửa bản ghi cũ có phút ngoài 00/30, thêm tùy chọn "(đã lưu)" để bảo toàn dữ liệu.
+- Giữ nguyên backend/API và cấu trúc Sheet Chấm công.
+
+24/08/2026 — SESSION V2:
+- Lưu magasin_session_token trong localStorage.
+- Lưu magasin_current_page trong localStorage.
+- Lưu magasin_page_state trong localStorage.
+- Tự khôi phục phiên và trang sau F5/reload.
+- Gia hạn TTL phiên khi getSession() khôi phục thành công.
+- Xóa toàn bộ trạng thái cục bộ khi đăng xuất.
+
+23/08/2026 — Chấm công V22:
+- Cập nhật module 10_Chấm_công.gs.
+- Chuyển giao diện sang nhập công thủ công + xác nhận.
+- Chuẩn hóa múi giờ Việt Nam và 24 giờ.
+- Thêm lọc lịch sử theo khoảng ngày.
+- Sắp xếp mới nhất trước.
+- Tổng hợp theo khoảng lọc.
+- Giới hạn sửa 24 giờ từ thời điểm xác nhận.
+- Tăng an toàn ghi dữ liệu bằng LockService và flush.
+- Mở rộng quyền xem chấm công cho quản lý theo phạm vi.
+
+LƯU Ý:
+- Project Map mô tả trạng thái triển khai thực tế.
+- Khi module thay đổi tiếp, phải cập nhật mục 10 và Nhật ký cập nhật.
+
+21. CẬP NHẬT 24/08/2026 — NỀN TẢNG DỮ LIỆU V3
+- Xác định Spreadsheet ID 1g5U4mSPvpTYC_0P0PrZEK95bPE6s-MpcV256wT0iMO8 là nguồn dữ liệu duy nhất.
+- Không phụ thuộc giá trị cũ của Script Properties khi xác định Spreadsheet.
+- Đồng bộ MAGASIN_USERS_SHEET_ID về ID chuẩn.
+- Giữ BREWFLOW_USERS_SHEET_ID chỉ để tương thích.
+- getOperationalSheet_() mở trực tiếp Spreadsheet chuẩn.
+- getUsersSheet_() không còn tự tạo Spreadsheet mới khi nguồn chuẩn đã tồn tại.
+- Thêm hàm kiểm tra nguồn dữ liệu MAGASIN.
+
+TÀI LIỆU THAM CHIẾU
+================================================================
+
+Backend:
+01_Cấu_hình_hệ_thống.gs
+02_Nền_tảng_hệ_thống.gs
+03_Đăng_nhập_xác_thực.gs
+04_Khôi_phục_mật_khẩu.gs
+05_Phiên_đăng_nhập.gs
+06_Hồ_sơ_nhân_viên.gs
+07_Phân_quyền.gs
+08_Quản_lý_người_dùng.gs
+09_Lịch_làm_việc.gs
+10_Chấm_công.gs
+11_Đổi_ca.gs
+12_KPI.gs
+13_Kho_hàng.gs
+14_Báo_cáo.gs
+15_Ứng_dụng_web.gs
+
+Frontend:
+Index.html
+
+Project Map này là tài liệu nền.
+Không phải code chạy trực tiếp.
+
+
+===============================================================
+6.1 — PHẦN 1 CRITICAL ĐÃ SỬA — 25/08/2026
+===============================================================
+- CRITICAL-01: 14_Báo_cáo.gs đã loại bỏ định nghĩa trùng getAttendanceManagement().
+- 14_Báo_cáo.gs chỉ còn wrapper getAttendanceReport() gọi logic quản lý chấm công từ module 10.
+- CRITICAL-02: updateAttendanceRecord() đã có catch lỗi ghi Sheet và trả fail_ thân thiện.
+- CRITICAL-03: updateAttendanceRecord() kiểm tra isAttendanceDeleted_() trước khi sửa.
+- CRITICAL-04: requestPasswordReset() gửi email trước rồi mới cập nhật mật khẩu/cache.
+- Không thay đổi cấu trúc Sheet hoặc tên các hàm nghiệp vụ hiện có.
+
+File thay đổi trong lần sửa này:
+- 04_Khôi_phục_mật_khẩu.gs
+- 10_Chấm_công.gs
+- 14_Báo_cáo.gs
+- MAGASIN_PROJECT_MAP_v1.9.txt
+
+
+===============================================================
+PHẦN 2 — HIGH ĐÃ XỬ LÝ
+===============================================================
+
+HIGH-01 — Chấm công check-in/check-out chống ghi đồng thời
+- File: 10_Chấm_công.gs
+- Thêm LockService cho checkInEmployee() và checkOutEmployee().
+- Có catch/finally và SpreadsheetApp.flush().
+- Giữ nguyên cấu trúc Sheet Chấm công.
+
+HIGH-02 — Chuẩn hóa thời gian check-in/check-out
+- File: 10_Chấm_công.gs
+- Dùng VN_TIMEZONE + vietNamDateTime_() để tạo mốc thời gian Việt Nam.
+- Không dùng raw new Date() cho mốc check-in/check-out nghiệp vụ.
+
+HIGH-03 — Thống nhất múi giờ Việt Nam
+- File: 01_Cấu_hình_hệ_thống.gs
+- Thêm VN_TIMEZONE = 'Asia/Ho_Chi_Minh'.
+- File: 09_Lịch_làm_việc.gs
+- File: 10_Chấm_công.gs
+- Thay Session.getScriptTimeZone() bằng VN_TIMEZONE tại các đoạn liên quan.
+
+HIGH-04 — Giới hạn thử đăng nhập
+- File: 01_Cấu_hình_hệ_thống.gs
+- Thêm cấu hình giới hạn thử đăng nhập.
+- File: 03_Đăng_nhập_xác_thực.gs
+- Tối đa 5 lần sai / 15 phút bằng CacheService.
+- Thành công sẽ xóa bộ đếm.
+
+File thay đổi ở Phase 2:
+- 01_Cấu_hình_hệ_thống.gs
+- 03_Đăng_nhập_xác_thực.gs
+- 09_Lịch_làm_việc.gs
+- 10_Chấm_công.gs
+
+
+PHẦN 3 — TRÙNG LẶP CODE [MEDIUM] — ĐÃ HOÀN TẤT
+===============================================================
+
+MEDIUM-01 — CHUẨN HÓA NGÀY
+- Thêm toVietnamDateKey_() vào 02_Nền_tảng_hệ_thống.gs.
+- 09_Lịch_làm_việc.gs giữ scheduleDateKey_() làm wrapper tương thích.
+- 10_Chấm_công.gs dùng trực tiếp toVietnamDateKey_().
+- Loại bỏ attendanceFilterDateKey_() và formatVietnamDateKey_() trùng lặp.
+
+MEDIUM-02 — PHẠM VI TRUY CẬP
+- Nâng cấp parseScopeList_()/scopeAllows_() trong 02_Nền_tảng_hệ_thống.gs.
+- Chuẩn hóa khoảng trắng; hỗ trợ dấu phẩy, chấm phẩy và xuống dòng.
+- 10_Chấm_công.gs dùng scopeAllows_() dùng chung.
+- Loại bỏ helpers phạm vi chấm công trùng khỏi module 10.
+
+MEDIUM-03 — CHUẨN HÓA VAI TRÒ
+- normalizeRole_() trong 07_Phân_quyền.gs hấp thụ logic MANAGER/QUẢN LÝ.
+- Loại bỏ normalizeManagerRoleV33_() khỏi module 10.
+
+MEDIUM-04 — KIỂM TRA QUYỀN QUẢN LÝ
+- Thêm requireManagerRole_() vào 07_Phân_quyền.gs.
+- requireOwner_() ở module 08 vẫn được giữ để tương thích, nhưng dùng nguồn kiểm tra chung.
+- Module 10 dùng requireManagerRole_() thay requireAttendanceManager_().
+
+BẢO TOÀN
+- Giữ các sửa CRITICAL + HIGH trong 10_Chấm_công.gs.
+- Không đổi Sheet, cột hoặc cấu trúc dữ liệu.
+- Không đổi tên hàm public đang được module khác/Index.html gọi.
+- Module 01 không sửa trong lần refactor này vì VN_TIMEZONE đã có sẵn.
+
+FILES THAY ĐỔI
+- 02_Nền_tảng_hệ_thống.gs
+- 07_Phân_quyền.gs
+- 08_Quản_lý_người_dùng.gs
+- 09_Lịch_làm_việc.gs
+- 10_Chấm_công.gs
+
+
+================================================================
+PHẦN CẬP NHẬT 25/08/2026 — PHẦN 4: HIỆU NĂNG
+================================================================
+
+PERF-01 — Giảm gọi ensureAttendanceStructure_()
+- Các hàm READ không còn gọi ensureAttendanceStructure_() mỗi request.
+- Các hàm WRITE vẫn ensure cấu trúc trực tiếp.
+- Không thêm lớp cache vào lần này để tránh giữ trạng thái cache không cần thiết.
+
+PERF-02 — Giới hạn đọc dữ liệu
+- Thêm MAX_ROWS_PER_REQUEST = 5000 trong 01_Cấu_hình_hệ_thống.gs.
+- Thêm getLimitedSheetRows_()/getOperationalRows_() trong 02_Nền_tảng_hệ_thống.gs.
+- Truy vấn nghiệp vụ lấy header + tối đa 5000 dòng dữ liệu mới nhất.
+- Diagnostics chấm công quản lý báo truncated/totalDataRows khi dữ liệu vượt giới hạn.
+- Các truy vấn đọc lấy tối đa 5.000 dòng mới nhất (header + dữ liệu cuối Sheet).
+- 09_Lịch_làm_việc.gs và 10_Chấm_công.gs sử dụng helper giới hạn.
+
+PERF-03 — Danh mục cửa hàng
+- Tạo Sheet "Cửa hàng" trong OPERATIONAL_SHEET_DEFS.
+- ensureStoreMasterData_() bootstrap danh mục lần đầu từ dữ liệu Chấm công + Lịch làm việc.
+- getAttendanceOptions() đọc danh mục từ Sheet "Cửa hàng", không quét 2 Sheet mỗi request.
+- Cột danh mục:
+  Id | Mã cửa hàng | Tên cửa hàng | Trạng thái | Ngày cập nhật | Ghi chú
+
+LƯU Ý:
+- PERF-02 là giới hạn ngắn hạn, không thay thế chiến lược archive theo năm.
+- Khi vượt 5000 dòng, các truy vấn chỉ lấy dữ liệu mới nhất và trả diagnostics để tránh hiểu nhầm rằng dữ liệu cũ đã biến mất.
+- Sheet "Cửa hàng" được tự tạo nếu chưa tồn tại khi getAttendanceOptions(scope=ALL) được gọi.
+
+===============================================================
+PHẦN 5 — VẤN ĐỀ KỸ THUẬT KHÁC [MEDIUM] — ĐÃ XỬ LÝ
+===============================================================
+
+TECH-01:
+- Sửa attendanceRow_().
+- Cột P (Giờ công) là nguồn dữ liệu chính.
+- Fallback chỉ tính từ E/F khi cả hai là Date object hợp lệ.
+- Không dùng new Date('HH:mm') cho fallback.
+
+TECH-02:
+- getAttendanceManagementV33() là CORE DUY NHẤT.
+- getAttendanceManagement() chỉ còn wrapper tương thích.
+- 14_Báo_cáo.gs tiếp tục là wrapper gọi V33.
+- Không còn hai khối xử lý báo cáo quản lý ~90% trùng nhau.
+
+TECH-03:
+- session token chuyển sang sessionStorage.
+- currentPage/pageState vẫn dùng localStorage để giữ UX khi reload.
+- Có migration một lần từ localStorage cũ sang sessionStorage.
+- Đóng tab sẽ xóa token khỏi sessionStorage.
+- Không thay đổi cơ chế restore trạng thái trang hiện tại.
+
+FILE THAY ĐỔI PHẦN 5:
+- 10_Chấm_công_MAGASIN_TECH_v1.txt
+- Index_MAGASIN_TECH_v1.txt
+- 14_Báo_cáo_TECH_v1.txt
+- MAGASIN_PROJECT_MAP_v2.3.txt
+
+FILE KHÔNG THAY ĐỔI:
+- 15_Ứng_dụng_web.gs — TECH-03 không cần CSP trong phạm vi sửa ngắn hạn.
+- Các module khác giữ nguyên.
+
+===============================================================
+PHẦN 6 — KIẾN TRÚC & CODE QUALITY [LOW/MEDIUM] — ĐÃ XỬ LÝ
+===============================================================
+
+ARCH-01 — TÁCH INDEX.HTML
+- Index.html được giữ làm HTML shell + bootstrap.
+- CSS được tách sang _styles.html.
+- Xác thực / session / navigation / shared UI tách sang _auth.html.
+- Lịch làm việc + tác vụ nhân viên tách sang _schedule.html.
+- Chấm công nhân viên tách sang _attendance.html.
+- Quản lý chấm công + các tác vụ UI còn lại tách sang _management.html.
+- Thêm include(filename) trong 15_Ứng_dụng_web.gs.
+- doGet() tiếp tục dùng createTemplateFromFile('Index') nên partials được xử lý server-side.
+- Không thay đổi tên API backend hoặc Sheet trong bước ARCH-01.
+
+CẤU TRÚC FRONTEND SAU ARCH-01:
+- Index.html
+- _styles.html
+- _auth.html
+- _attendance.html
+- _schedule.html
+- _management.html
+
+ARCH-02 — KHO HÀNG
+- 13_Kho_hàng.gs được giữ làm module mở rộng.
+- Thêm getInventoryModuleStatus(token) như một stub an toàn.
+- Stub trả implemented:false và thông báo rõ backend Kho hàng chưa triển khai.
+- Không tự tạo nghiệp vụ nhập/xuất/chuyển/kiểm kê chưa có trong nguồn.
+- Frontend hiện có placeholder nên không coi Kho hàng là nghiệp vụ hoàn chỉnh.
+
+FILE THAY ĐỔI PHẦN 6:
+- Index_MAGASIN_ARCH_v1.txt
+- _styles_MAGASIN_ARCH_v1.txt
+- _auth_MAGASIN_ARCH_v1.txt
+- _attendance_MAGASIN_ARCH_v1.txt
+- _schedule_MAGASIN_ARCH_v1.txt
+- _management_MAGASIN_ARCH_v1.txt
+- 15_Ứng_dụng_web_ARCH_v1.txt
+- 13_Kho_hàng_ARCH_v1.txt
+- MAGASIN_PROJECT_MAP_v2.4.txt
+
+===============================================================
+PHẦN 6 — HOTFIX ARCH-01: SỬA LỖI INCLUDE HTML
+===============================================================
+
+Nguyên nhân:
+- Index.html đã gọi include('_styles'), include('_auth'),
+  include('_schedule'), include('_attendance'), include('_management').
+- 15_Ứng_dụng_web.gs đang chạy thực tế chưa có hàm include(),
+  hoặc các partial HTML chưa được tạo đúng tên trong Apps Script.
+- Vì vậy doGet() tạo template Index nhưng khi render gặp:
+  "Không tìm thấy tệp HTML có tên _styles."
+
+Cấu hình chuẩn:
+- 15_Ứng_dụng_web.gs có include(filename).
+- Phải có đúng 5 file HTML:
+  _styles.html
+  _auth.html
+  _schedule.html
+  _attendance.html
+  _management.html
+
+Không đổi tên các file partial nếu không cập nhật đồng thời Index.html.
+
+===============================================================
+PHẦN 7 — SỬA FRONTEND ROLE + MOBILE NAVIGATION [FIX V2]
+===============================================================
+- Index.html: sidebar được gom lại thành hai nhóm role rõ ràng.
+- STAFF chỉ còn: Lịch làm, Chấm công, Đổi ca, Tồn hàng, Thông tin cá nhân.
+- STORE_MANAGER / INVENTORY_MANAGER / OWNER dùng nhóm quản lý riêng.
+- _styles.html: thêm một lớp MAGASIN MOBILE FINAL duy nhất ở cuối CSS.
+- Mobile dùng sidebar trái 64/68px, mở rộng 232/248px, không dùng bottom navigation.
+- _auth.html: chỉ còn một controller sidebar điều khiển role + collapsed/expanded.
+- showPage và các module nhân viên reset layout state trước khi render.
+- Loại bỏ việc phụ thuộc vào class brewflow-mobile ở controller mobile mới.
+
+===============================================================
+PHẦN 7A — HOTFIX RAW CSS TRONG PARTIAL _styles.html
+===============================================================
+NGUYÊN NHÂN:
+- _styles.html có </style> ở giữa file, sau đó phần MAGASIN MOBILE FINAL
+  tiếp tục nằm ngoài thẻ <style>, nên browser render phần CSS đó thành text.
+- Vì vậy lỗi hiển thị trong ảnh là lỗi trực tiếp ở _styles.html.
+
+SỬA:
+- Xóa wrapper <style>...</style> khỏi _styles.html.
+- Giữ toàn bộ nội dung CSS, kể cả MAGASIN MOBILE FINAL, trong pure CSS.
+- Index.html tự bọc include(_styles) bằng một thẻ <style> duy nhất.
+
+FILE THỰC SỰ CẦN THAY:
+- Index_MAGASIN_MOBILE_FIX_v3.txt
+- _styles_MAGASIN_MOBILE_FIX_v3.txt
+
+CÁC FILE KHÁC:
+- _auth/_schedule/_attendance/_management không thay đổi logic.
+- 15_Ứng_dụng_web.gs hiện tại đã có include() và không cần sửa cho hotfix.
+
+===============================================================
+PHẦN 7B — HOTFIX PARTIAL HTML/JS V4
+===============================================================
+
+LỖI:
+- Index và các partial JavaScript trước đó dùng <script> wrapper không đồng nhất,
+  đồng thời Index còn giữ JS inline cũ.
+- Kết quả: một phần JavaScript bị render trực tiếp thành text trong giao diện.
+
+SỬA:
+- Index.html chỉ giữ shell/HTML và bốn wrapper <script> chứa include().
+- _auth.html, _schedule.html, _attendance.html, _management.html trở thành JS thuần,
+  không chứa thẻ <script>.
+- _styles.html là CSS thuần, không chứa thẻ <style>.
+- Xóa JavaScript inline còn sót trong Index.
+- Không thay đổi logic backend hoặc nghiệp vụ.
+
+===============================================================
+PHẦN 7B — HOTFIX FILE NAME / PARTIAL LOADING [FIX V5]
+===============================================================
+
+NGUYÊN NHÂN XÁC NHẬN:
+- include() đang yêu cầu đúng tên partial:
+  _styles.html
+  _auth.html
+  _schedule.html
+  _attendance.html
+  _management.html
+- Các file xuất cho người dùng là .txt để tải về/copy, nhưng khi tạo trong
+  Apps Script phải tạo HTML file với đúng tên ở trên.
+- Không được đặt tên file trong Apps Script thành:
+  _auth_MAGASIN_MOBILE_FIX_v4.html
+  _auth_MAGASIN_MOBILE_FIX_v4.txt
+  hoặc bất kỳ hậu tố nào khác.
+
+CẤU TRÚC APPS SCRIPT BẮT BUỘC:
+- Index.html
+- _styles.html
+- _auth.html
+- _schedule.html
+- _attendance.html
+- _management.html
+
+Index.html:
+- include('_styles')
+- include('_auth')
+- include('_schedule')
+- include('_attendance')
+- include('_management')
+
+15_Ứng_dụng_web.gs:
+- createTemplateFromFile('Index')
+- include(filename) whitelist 5 partial trên.
+
+FIX V5:
+- Cung cấp lại toàn bộ frontend với tên file đích được ghi rõ.
+- include() trả lỗi chẩn đoán chính xác nếu partial bị thiếu/sai tên.
+- Không thay đổi backend nghiệp vụ.
+================================================================
+PHẦN 8 — RESPONSIVE SYSTEM V2 [26/08/2026]
+================================================================
+
+MỤC TIÊU:
+- Tối ưu hiển thị MAGASIN đồng thời trên máy tính, tablet và điện thoại.
+- Giữ nguyên HTML và logic nghiệp vụ; ưu tiên thay đổi ở lớp CSS/UI.
+- Loại bỏ các lớp responsive cũ chồng chéo và đưa về một hệ responsive duy nhất.
+
+KIẾN TRÚC RESPONSIVE CHÍNH THỨC:
+- Desktop:
+  + Sidebar mặc định 250px.
+  + Màn hình >= 1440px: Sidebar 270px.
+  + Main area dùng flex tự co, không phụ thuộc công thức width cứng.
+- Laptop/tablet ngang:
+  + Khoảng 769–1199px: Sidebar 220px.
+  + Main area tự co theo flex.
+- Mobile <= 768px:
+  + Sidebar dọc bên trái 68px.
+  + Khi mở rộng: 248px.
+  + Không dùng bottom navigation.
+  + Main area chiếm toàn bộ phần còn lại.
+- Mobile rất hẹp <= 420px:
+  + Sidebar mở rộng tối đa 224px để giữ không gian nội dung.
+
+TRẠNG THÁI SIDEBAR:
+- State CSS/JS chính thức: `.is-expanded`.
+- Không sử dụng song song `.sidebar-expanded`.
+- Nút `#sidebarToggle` điều khiển trạng thái mở rộng/thu gọn.
+- Trạng thái sidebar có thể lưu qua localStorage hiện tại.
+- Không phụ thuộc `brewflow-mobile`.
+
+SINGLE SOURCE OF TRUTH:
+- Xóa hệ responsive legacy V34/V35 và các block mobile sidebar cũ.
+- Không còn selector `html.brewflow-mobile ...` trong `_styles.html`.
+- Không dùng bottom navigation trên mobile.
+- Các module nghiệp vụ dùng chung breakpoint responsive.
+
+LOGIN / AUTH:
+- Mobile login/register/verify chuyển sang layout theo chiều rộng viewport.
+- Form 1 cột trên điện thoại.
+- Input/button tối thiểu phù hợp thao tác cảm ứng.
+- Có xử lý safe-area cho thiết bị di động.
+- Không thay đổi logic xác thực hoặc session.
+
+MODULE NHÂN VIÊN:
+- Action grid / form grid / KPI grid chuyển 1 cột trên mobile.
+- Lịch tuần giữ 7 ngày nhưng cho phép cuộn ngang trong vùng riêng, không làm tràn toàn bộ trang.
+- Bảng nhân viên giữ vùng cuộn ngang khi cần.
+- Các card nghiệp vụ giảm padding và bo góc phù hợp màn hình nhỏ.
+
+CHẤM CÔNG:
+- Dashboard/form chuyển 1 cột trên mobile.
+- Bộ lọc quản lý chuyển 1 cột.
+- Lịch sử chấm công trên mobile chuyển từ bảng ngang sang card 2 cột.
+- Nút thao tác chấm công chiếm toàn bộ chiều rộng card khi cần.
+
+NGUYÊN TẮC KHÔNG THAY ĐỔI:
+- Không thay tên Sheet.
+- Không thay API backend.
+- Không thay session/authentication.
+- Không thay nghiệp vụ chấm công/lịch làm.
+- Không thay cấu trúc include của Apps Script.
+
+FILE TRIỂN KHAI LIÊN QUAN:
+- `_styles_MAGASIN_RESPONSIVE_V2.txt`
+  -> Khi đưa vào Apps Script phải đặt đúng tên: `_styles.html`
+- `_auth_MAGASIN_SIDEBAR_FIXED_v1.txt`
+  -> Khi đưa vào Apps Script phải đặt đúng tên: `_auth.html`
+- `15_Ứng_dụng_web_MAGASIN_FIXED_v7.txt`
+  -> Bản `15_Ứng_dụng_web.gs` sửa cơ chế include partial.
+
+KIỂM TRA SAU DEPLOY:
+1. Desktop >= 1440px: sidebar 270px, nội dung không tràn ngang.
+2. Laptop 1024–1366px: sidebar 220px hoặc 250px tùy breakpoint, nội dung tự co.
+3. iPhone/Android <= 768px: sidebar trái 68px, menu icon hiển thị.
+4. Bấm toggle: sidebar mở rộng, text menu xuất hiện.
+5. Xoay màn hình: layout không tạo horizontal overflow.
+6. Lịch làm việc và chấm công không vượt viewport.
+7. Bảng lịch sử chấm công chuyển card trên mobile.
+8. Sau F5: session và trạng thái trang tiếp tục hoạt động như trước.
+
+================================================================
+PHẦN 8A — SIDEBAR ROLE FIX [26/08/2026]
+================================================================
+
+NGUYÊN NHÂN:
+- Index.html dùng class `staff-only-menu`.
+- Controller sidebar cũ kiểm tra `staff-task-menu-item` và `staff-personal-menu-item`.
+- Hai tên class không đồng nhất làm các item STAFF bị đặt `display:none`.
+
+SỬA:
+- Đồng bộ controller sidebar với cấu trúc class thực tế của Index.html.
+- Không thay đổi role backend.
+- Không thay đổi danh sách quyền ROLE_PAGES.
+
+KẾT QUẢ MỤC TIÊU STAFF:
+- Lịch làm
+- Chấm công
+- Đổi ca
+- Tồn hàng
+- Thông tin cá nhân
+
+================================================================
+PHẦN 8B — INCLUDE HOTFIX V7 [26/08/2026]
+================================================================
+
+NGUYÊN NHÂN:
+- Partial JS thuần `_auth/_schedule/_attendance/_management` có chứa
+  chuỗi HTML được gán qua innerHTML.
+- Cơ chế include bằng createHtmlOutputFromFile().getContent() gây lỗi
+  parser HTML khi nạp partial.
+
+SỬA:
+- `15_Ứng_dụng_web.gs` dùng `createTemplateFromFile(name).getRawContent()`
+  để lấy nguyên văn partial.
+- Index.html tiếp tục bọc partial CSS bằng `<style>` và partial JS bằng
+  `<script>`.
+- Không thay đổi business logic backend.
+
+================================================================
+NHẬT KÝ CẬP NHẬT — 26/08/2026
+================================================================
+- Responsive System V2: hoàn tất chuẩn hóa desktop/tablet/mobile.
+- Sidebar mobile chính thức dùng trái 68px -> mở rộng 248px.
+- Mobile rất hẹp dùng max 224px khi mở rộng.
+- Loại bỏ phụ thuộc `brewflow-mobile`.
+- Đồng bộ trạng thái sidebar `.is-expanded`.
+- Tối ưu login mobile và module nghiệp vụ.
+- Chuyển lịch sử chấm công thành card trên mobile.
+- Ghi nhận Sidebar Role Fix.
+- Ghi nhận Include Hotfix V7.
+
+===============================================================
+PHẦN 9 — SIDEBAR DRAWER + PARENT/CHILD NAVIGATION [V36]
+===============================================================
+
+Mục tiêu:
+- Sidebar mặc định chỉ hiển thị biểu tượng hamburger.
+- Khi nhấn hamburger, drawer mở từ bên trái và phủ lên vùng nội dung.
+- Không làm co/đẩy nội dung chính khi drawer mở.
+- Parent menu có mũi tên và submenu con mở/đóng độc lập.
+- Menu được dựng theo role, không tạo quyền mới.
+
+Cấu trúc điều hướng:
+- STAFF: Tổng quan; Công việc -> Lịch làm / Chấm công / Đổi ca;
+  Kho hàng -> Tồn hàng; Tài khoản -> Thông tin cá nhân.
+- OWNER: Tổng quan; Vận hành -> Kho hàng / Chấm công / Đơn hàng;
+  Báo cáo -> Báo cáo; Hệ thống -> Cài đặt / Thông tin cá nhân.
+- STORE_MANAGER: Tổng quan; Vận hành -> Kho hàng / Chấm công / Đơn hàng;
+  Báo cáo -> Báo cáo; Tài khoản -> Thông tin cá nhân.
+- INVENTORY_MANAGER: Tổng quan; Kho hàng -> Kho hàng;
+  Báo cáo -> Báo cáo; Tài khoản -> Thông tin cá nhân.
+
+Nguyên tắc kỹ thuật:
+- Chỉ dùng state sidebar `.is-expanded`.
+- Không dùng `brewflow-mobile`.
+- Dùng backdrop để đóng drawer khi chạm ra ngoài.
+- Escape đóng drawer.
+- Parent không phải page route; child mới gọi showPage()/renderStaffTaskPlaceholder_().
+- Không thay đổi ROLE_PAGES backend/client permission.
+
+FILE TRIỂN KHAI:
+- _styles_MAGASIN_DRAWER_V1.txt -> thay `_styles.html`.
+- _auth_MAGASIN_DRAWER_V1.txt -> thay `_auth.html`.
+- Index.html giữ shell hiện tại, không cần đổi HTML sidebar vì controller dựng menu động.
+
+===============================================================
+NHẬT KÝ CẬP NHẬT — 26/08/2026 — V36
+===============================================================
+- Thiết kế sidebar theo mẫu Sapo FnB được người dùng cung cấp.
+- Chuyển từ sidebar luôn mở sang drawer mở khi nhấn hamburger.
+- Thêm parent/child navigation và mũi tên mở rộng.
+- Giữ nguyên phân quyền và route hiện có.
+- Loại bỏ nhu cầu duy trì nhiều layout sidebar riêng cho mobile.
+
+
+
+===============================================================
+PHẦN 8C — HOTFIX DRAWER INTERACTION V1
+===============================================================
+
+LỖI XÁC NHẬN:
+- Drawer mở đúng và submenu hiển thị đúng nhưng toàn bộ khu vực drawer không nhận click.
+- Nguyên nhân không nằm ở event handler parent/child.
+- .app-shell.active tạo stacking context với z-index thấp hơn backdrop được append vào document.body.
+- Backdrop z-index:999 nằm trên app-shell, vì vậy lớp mờ phủ cả drawer và chặn pointer interaction.
+
+SỬA:
+- .app-shell.active được đặt z-index:998.
+- .magasin-drawer giữ z-index:1000.
+- .magasin-drawer-backdrop đặt z-index:999.
+- Kết quả: backdrop phủ main content nhưng drawer luôn nằm phía trên backdrop và nhận click bình thường.
+
+FILE THAY ĐỔI:
+- _styles_MAGASIN_DRAWER_V2.txt -> triển khai thành _styles.html
+
+KHÔNG THAY ĐỔI:
+- Logic route/showPage.
+- Phân quyền role.
+- Cấu trúc Index.html.
+- Backend Apps Script.
+- Cấu trúc Google Sheets.
+
+===============================================================
+NHẬT KÝ CẬP NHẬT — 26/08/2026 — V3.2
+===============================================================
+- Sửa lỗi Sidebar Drawer không tương tác được sau khi mở.
+- Xác nhận nguyên nhân là stacking context/z-index giữa app-shell và backdrop.
+- Drawer parent/child navigation giữ nguyên.
+- Không thay đổi nghiệp vụ.
+
+
+===============================================================
+PHẦN 10 — LỊCH LÀM VIỆC V3.3 — EMPLOYEE + MANAGER SCHEDULE
+===============================================================
+
+TRẠNG THÁI:
+- ĐÃ TRIỂN KHAI PHẦN CODE.
+- Không tạo Sheet mới.
+- Tiếp tục dùng Sheet "Lịch làm việc".
+
+09 — LỊCH LÀM VIỆC V3.3
+------------------------
+Backend:
+- scheduleDateKey_
+- scheduleTimeToMinutes_
+- scheduleShiftLabel_
+- getMySchedule
+- registerShift
+- cancelShift
+- getScheduleEmployeeOptions
+- getScheduleManagement
+- approveSchedule
+- assignSchedule
+
+THAY ĐỔI ĐĂNG KÝ CA:
+- Không còn yêu cầu người dùng nhập "Ca".
+- Dữ liệu đầu vào:
+  + Ngày
+  + Giờ bắt đầu
+  + Giờ kết thúc
+  + Cửa hàng
+- Giờ hợp lệ cho đăng ký mới:
+  + 00:00 → 23:30
+  + bước 30 phút.
+- Giờ kết thúc phải lớn hơn giờ bắt đầu.
+- Cột C "Ca" của Sheet vẫn được giữ để tương thích và được suy ra tự động:
+  + 05:00–11:30 -> Sáng
+  + 12:00–16:30 -> Chiều
+  + 17:00–23:30 và 00:00–04:30 -> Tối
+- Chống đăng ký trùng hoàn toàn theo người dùng + ngày + cửa hàng + giờ.
+
+TRẠNG THÁI:
+- PENDING = nhân viên tự đăng ký, chờ quản lý.
+- APPROVED = đã duyệt hoặc đã được quản lý xếp.
+- CANCELLED = đã hủy.
+- Không thêm trạng thái mới vào Sheet để giữ tương thích.
+
+QUẢN LÝ XẾP LỊCH:
+- OWNER và STORE_MANAGER được phép xem theo Phạm vi truy cập.
+- getScheduleManagement() trả danh sách lịch theo khoảng ngày/cửa hàng.
+- getScheduleEmployeeOptions() chỉ trả nhân viên ACTIVE có Phạm vi phù hợp cửa hàng.
+- approveSchedule() duyệt yêu cầu PENDING.
+- assignSchedule() tạo trực tiếp một dòng APPROVED cho nhân viên.
+- Lịch do quản lý xếp được đánh dấu [MANAGER_ASSIGNED] trong cột Ghi chú.
+- Frontend nhận origin=MANAGER_ASSIGNED và hiển thị "Quản lý xếp lịch".
+- Không đổi cấu trúc 11 cột của Sheet Lịch làm việc.
+
+GIAO DIỆN NHÂN VIÊN:
+- 7 ngày Thứ 2 → Chủ nhật.
+- Mỗi ngày có thể nhiều ca, xếp dọc.
+- Card hiển thị giờ + cửa hàng + trạng thái.
+- Màu:
+  + 05:00–12:00 = xanh dương.
+  + 12:00–17:00 = đỏ.
+  + 17:00–22:00 = xanh dương pastel.
+- Lịch đã đăng ký/đã duyệt dùng lại cùng bố cục 7 ngày.
+- Trên mobile lịch có vùng cuộn ngang riêng, không làm tràn toàn trang.
+- Đăng ký ca dùng select giờ 48 mốc 00:00 → 23:30, bước 30 phút.
+
+GIAO DIỆN QUẢN LÝ:
+- Bộ lọc Từ ngày / Đến ngày / Cửa hàng.
+- Lịch tuần của nhân viên.
+- Danh sách yêu cầu PENDING để Duyệt.
+- Form xếp lịch trực tiếp:
+  + Ngày
+  + Giờ bắt đầu
+  + Giờ kết thúc
+  + Cửa hàng
+  + Nhân viên
+  + Ghi chú.
+- Lịch quản lý xếp được ghi APPROVED ngay.
+
+QUYỀN:
+- OWNER: thêm page schedule-management.
+- STORE_MANAGER: thêm page schedule-management.
+- STAFF: không có route quản lý lịch.
+- INVENTORY_MANAGER: không có route quản lý lịch.
+
+FRONTEND FILES V3.3:
+- _schedule.html — thay toàn bộ bằng bản V3.3.
+- _management.html — bổ sung màn hình quản lý lịch.
+- _auth.html — bổ sung route + menu "Lịch làm việc" cho OWNER/STORE_MANAGER.
+- _styles.html — bổ sung CSS override lịch V3.3 và CSS quản lý lịch.
+
+KHÔNG THAY ĐỔI:
+- Chấm công.
+- Session/authentication.
+- Drawer mechanism/z-index.
+- Cấu trúc Sheet.
+- Tên các API cũ.
+- Tên partial HTML chuẩn.
+
+===============================================================
+NHẬT KÝ CẬP NHẬT — 26/08/2026 — V3.3
+===============================================================
+- Hoàn tất thiết kế backend Lịch làm việc V3.3.
+- Loại bỏ trường "Ca" khỏi luồng nhập của nhân viên.
+- Chuẩn hóa giờ đăng ký theo 30 phút.
+- Thêm cơ chế suy ra cột Ca từ giờ bắt đầu để tương thích.
+- Thêm chống đăng ký trùng.
+- Thêm quản lý xem lịch.
+- Thêm duyệt đăng ký PENDING.
+- Thêm quản lý xếp lịch APPROVED.
+- Dùng [MANAGER_ASSIGNED] để phân biệt lịch do quản lý xếp mà không đổi Sheet.
+- Cập nhật giao diện lịch tuần 7 ngày + nhiều ca/ngày.
+- Chuẩn hóa màu thời gian theo yêu cầu mới.
+- Thêm CSS mobile cho vùng lịch cuộn riêng.
+- Bổ sung route và quyền schedule-management cho OWNER/STORE_MANAGER.
+
+
+================================================================
+PHẦN 11 — LỊCH LÀM VIỆC V3.4 — OFFICIAL WEEK + NEXT WEEK REGISTRATION
+================================================================
+
+MỤC TIÊU:
+- Lịch làm việc trong tuần chỉ hiển thị lịch CHÍNH THỨC.
+- Không hiển thị chữ "Chờ duyệt" trong lịch chính thức.
+- Mỗi ca chính thức hiển thị dưới dạng ô màu và chỉ chứa khung giờ.
+- Đăng ký ca luôn dành cho 7 ngày của tuần kế tiếp.
+- Cuối Chủ nhật là mốc chốt lịch chính thức; khi sang tuần mới, lịch APPROVED trở thành lịch hiện tại.
+
+GIAO DIỆN NHÂN VIÊN:
+1. LỊCH LÀM VIỆC TRONG TUẦN
+   - Chỉ lấy item APPROVED.
+   - 7 ngày Thứ 2 → Chủ nhật.
+   - Mỗi ca là 1 ô màu.
+   - Nội dung ô: H:mm-H:mm.
+   - 05:00–12:00 = xanh dương.
+   - 12:00–17:00 = đỏ.
+   - 17:00–22:00 = xanh dương pastel.
+   - Không hiển thị PENDING/CANCELLED/origin trong lịch chính thức.
+
+2. ĐĂNG KÝ CA LÀM TUẦN TỚI
+   - Chỉ cho phép chọn ngày thuộc tuần kế tiếp.
+   - Giờ bắt đầu/kết thúc: 00:00 → 23:30, bước 30 phút.
+   - Có 4 trường: Ngày / Giờ bắt đầu / Giờ kết thúc / Cửa hàng.
+   - Ngày mặc định = Thứ Hai tuần kế tiếp.
+   - Min = Thứ Hai tuần kế tiếp; Max = Chủ nhật tuần kế tiếp.
+
+3. ĐĂNG KÝ TUẦN TỚI
+   - Hiển thị cùng bố cục 7 ngày.
+   - Cho phép nhìn trạng thái Chờ duyệt / Đã duyệt / Quản lý xếp lịch.
+   - Không hiển thị các bản ghi CANCELLED.
+
+BACKEND:
+- scheduleDisplayTime_() chuẩn hóa dữ liệu giờ Date/String về H:mm.
+- scheduleTimeKey_() dùng để so sánh giờ ổn định với dữ liệu cũ.
+- scheduleNextWeekBounds_() xác định tuần đăng ký kế tiếp.
+- registerShift() từ chối ngày không thuộc tuần kế tiếp.
+- getMySchedule() trả giờ đã chuẩn hóa, tránh hiển thị Date 1899 trong giao diện.
+
+KHÔNG THAY ĐỔI:
+- Cấu trúc Sheet "Lịch làm việc".
+- Cột Ca vẫn giữ để tương thích.
+- Chấm công.
+- Session/authentication.
+- Drawer mechanism/z-index.
+
+FILE V3.4:
+- _schedule_V3.4.txt
+- 09_Lịch_làm_việc_V3.4.txt
+- _styles_MAGASIN_V3.4_FULL_MERGED.txt
+
+================================================================
+NHẬT KÝ — 26/08/2026 — V3.4
+================================================================
+- Sửa lỗi giờ hiển thị thành Sat Dec 30 1899... do Sheet chứa Date object.
+- Chuẩn hóa giờ hiển thị về H:mm.
+- Lịch tuần hiện tại chỉ hiển thị APPROVED.
+- Loại trạng thái PENDING khỏi lịch chính thức.
+- Tách rõ lịch chính thức tuần này và đăng ký tuần kế tiếp.
+- Giới hạn frontend/backend đăng ký chỉ trong 7 ngày tuần kế tiếp.
+- Thêm chú thích chốt lịch vào cuối Chủ nhật.
+
+================================================================
+PHẦN 11 — V3.5 KHÔI PHỤC HEADER CHUNG + HAMBURGER
+================================================================
+
+TRẠNG THÁI:
+- ĐÃ CẬP NHẬT GIAO DIỆN HEADER.
+- Không thay đổi backend nghiệp vụ.
+- Không thay đổi cấu trúc Sheet.
+- Giữ nguyên module Lịch làm việc V3.4.
+
+MỤC TIÊU HIỂN THỊ:
+- Header chung nằm trên cùng của toàn bộ WebApp.
+- Hamburger nằm cùng hàng với pageTitle/pageDescription.
+- Desktop và mobile dùng cùng một header.
+- Drawer trượt từ trái vào và bắt đầu bên dưới header.
+- Overlay chỉ phủ vùng nội dung, không phủ header.
+- Khi Drawer mở, hamburger chuyển thành biểu tượng X.
+
+FILE CHUẨN V3.5:
+- Index_MAGASIN_HEADER_DRAWER_V4.txt -> Index.html
+- _styles_MAGASIN_V3.5_FULL_HEADER_DRAWER_SCHEDULE.txt -> _styles.html
+- _auth_MAGASIN_HEADER_DRAWER_V4.txt -> _auth.html (dùng khi cần đồng bộ controller header/drawer)
+
+TƯƠNG THÍCH:
+- _schedule_V3.4 giữ nguyên.
+- 09_Lịch_làm_việc_V3.4 giữ nguyên.
+- 10_Chấm_công.gs giữ nguyên.
+- 15_Ứng_dụng_web.gs giữ nguyên.
+- Drawer parent/child giữ nguyên.
+
+KIỂM TRA SAU DEPLOY:
+1. Dashboard, Kho hàng, Chấm công, Lịch làm đều có header.
+2. Hamburger nằm bên trái tiêu đề.
+3. Nhấn hamburger mở Drawer từ trái.
+4. Header vẫn nhìn thấy khi Drawer mở.
+5. Click overlay đóng Drawer.
+6. Chọn child menu điều hướng và tự đóng Drawer.
+7. Mobile header cao 64px; desktop 72px.
