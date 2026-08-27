@@ -1,0 +1,140 @@
+/* =========================================================
+   MAGASIN — PHASE 2 UI FIX
+   Fix session rehydrate + logout + reload navigation.
+
+   Mục tiêu:
+   - Không hiển thị chớp cửa sổ Login khi reload trong lúc session còn sống.
+   - Reload phải quay lại đúng trang/tác vụ đang đứng.
+   - Luôn có handler cho nút Đăng xuất trong sidebar.
+   - Khi session hết hạn / bị vô hiệu hóa, quay về Login sạch trạng thái.
+========================================================= */
+
+(function(){
+  let booted=false;
+
+  function hideLoginDuringSessionRestore_(){
+    try{
+      if(window.sessionStorage.getItem('magasin_session_token')){
+        document.documentElement.classList.add('magasin-session-pending');
+      }
+    }catch(err){}
+  }
+
+  function showLogin_(){
+    document.documentElement.classList.remove('magasin-session-pending');
+
+    if(typeof currentSessionToken!=='undefined') currentSessionToken='';
+    if(typeof currentUser!=='undefined') currentUser=null;
+    if(typeof magasinCurrentPageKey!=='undefined') magasinCurrentPageKey='dashboard';
+    if(typeof magasinCurrentStaffTask!=='undefined') magasinCurrentStaffTask='';
+
+    if(typeof clearMagasinSessionStorage_==='function'){
+      clearMagasinSessionStorage_();
+    }
+
+    const app=document.getElementById('app');
+    const card=document.querySelector('.card');
+    if(app)app.classList.remove('active','drawer-open');
+    if(card)card.style.display='';
+
+    const loginForm=document.getElementById('loginForm');
+    if(loginForm){
+      try{loginForm.reset();}catch(err){}
+    }
+
+    if(typeof view==='function')view('login');
+  }
+
+  /*
+   * Thay thế luồng restore cũ để đảm bảo:
+   * 1) session được xác nhận với backend;
+   * 2) session thành công -> mở app -> khôi phục đúng trang đã lưu;
+   * 3) session thất bại -> quay Login;
+   * 4) lỗi mạng -> không phá session ngay, nhưng vẫn không để UI rơi về Login giả.
+   */
+  function restoreSessionFixed_(){
+    const token=typeof magasinSessionTokenGet_==='function'
+      ? magasinSessionTokenGet_()
+      : '';
+
+    if(!token){
+      document.documentElement.classList.remove('magasin-session-pending');
+      return;
+    }
+
+    if(!(window.google&&google.script&&google.script.run)){
+      document.documentElement.classList.remove('magasin-session-pending');
+      return;
+    }
+
+    document.documentElement.classList.add('magasin-session-pending');
+
+    google.script.run
+      .withSuccessHandler(function(r){
+        if(!r||!r.ok||!r.user){
+          showLogin_();
+          return;
+        }
+
+        if(typeof saveMagasinSessionToken_==='function'){
+          saveMagasinSessionToken_(token);
+        }
+
+        document.documentElement.classList.remove('magasin-session-pending');
+
+        if(typeof openApp==='function'){
+          openApp(r.user,token);
+        }
+
+        /*
+         * openApp() dùng dashboard làm mặc định cho login mới.
+         * Sau khi rehydrate session, khôi phục navigation/page state đã lưu.
+         */
+        setTimeout(function(){
+          if(typeof restoreMagasinSavedState_==='function'){
+            restoreMagasinSavedState_();
+          }
+        },0);
+      })
+      .withFailureHandler(function(){
+        /* Lỗi mạng tạm thời: giữ session pending thay vì xóa token.
+           Có thể reload lại để xác nhận session. */
+        document.documentElement.classList.remove('magasin-session-pending');
+      })
+      .getSession(token);
+  }
+
+  function installLogoutHandler_(){
+    if(document.documentElement.dataset.magasinLogoutHandler==='1')return;
+    document.documentElement.dataset.magasinLogoutHandler='1';
+
+    /* Dùng delegation vì Drawer được dựng lại động theo role. */
+    document.addEventListener('click',function(e){
+      const button=e.target.closest('#sidebarLogoutButton, [data-magasin-logout]');
+      if(!button)return;
+      e.preventDefault();
+      e.stopPropagation();
+
+      if(typeof handleLogout==='function'){
+        handleLogout();
+      }
+    },true);
+  }
+
+  function boot_(){
+    if(booted)return;
+    booted=true;
+
+    installLogoutHandler_();
+    restoreSessionFixed_();
+  }
+
+  /* Chạy càng sớm càng tốt để chặn Login flash. */
+  hideLoginDuringSessionRestore_();
+
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',boot_,{once:true});
+  }else{
+    boot_();
+  }
+})();
