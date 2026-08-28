@@ -1,0 +1,1 @@
+Workforce V2 Phase 9 links attendance directly to APPROVED official schedules via attendance.schedule_id. Check-in snapshots planned times and active employee grade/rate; check-out derives actual duration, late/early minutes, hours_worked and amount.

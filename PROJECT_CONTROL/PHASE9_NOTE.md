@@ -1,0 +1,1 @@
+Workforce V2 Phase 9 checkpoint: link attendance directly to approved official schedules. Attendance RPCs must use schedule_id; planned times and grade/rate are snapshotted at check-in; actual hours are finalized at check-out. No overnight shifts are supported.
