@@ -42,17 +42,23 @@ Publish official schedule
 Attendance
 ```
 
+### Phase 0 — Architecture baseline
+
+- Canonical Workforce V2 schedule architecture documented in `docs/architecture/MAGASIN_WORKFORCE_ARCHITECTURE_V2.md`.
+- Business timezone, week boundaries, availability semantics, mentor semantics, generation lifecycle and publish boundary are defined.
+- Phase 0 is documentation-only.
+
 ### Phase 1 — Data model integrity
 
-Completed the first data-integrity hardening migration for Workforce V2 without changing scheduler behavior. The migration:
+- Workforce V2 data-integrity hardening migration prepared in `supabase/migrations/20260828001200_workforce_data_integrity_v1.sql`.
+- Generation week consistency, generic-demand semantics, scheduler-oriented indexes and schema comments are defined.
+- Phase 1 has no scheduler algorithm, publish workflow or UI changes.
 
-- enforces `week_end = week_start + 6` for a generation run;
-- prevents a generic staffing requirement from carrying a meaningless skill level;
-- keeps `updated_at` synchronized on generation runs;
-- adds scheduler-oriented indexes for availability, active skills, constraints, staffing requirements and generation assignments;
-- documents the intended V1 semantics on key workforce columns.
+### Phase 2 — Scheduler domain rules
 
-The deterministic scheduler engine, full review/publish RPC flow, and complete Workforce UI remain later phases.
+- Canonical rulebook documented in `docs/architecture/MAGASIN_SCHEDULER_RULES_V1.md`.
+- Hard constraints, soft objectives, deterministic ordering, coverage semantics, mentor rules and explanation codes are defined.
+- Phase 2 has no scheduler engine, publish workflow or UI changes.
 
 ## Printer
 
@@ -60,8 +66,10 @@ The deterministic scheduler engine, full review/publish RPC flow, and complete W
 
 ## Remaining work
 
-- Complete all Supabase-backed business modules.
-- Complete Workforce V2 UI and deterministic scheduler engine.
+- Implement deterministic Workforce scheduler engine.
+- Implement validation/explainability layer.
+- Complete Workforce RPC flow.
+- Complete Workforce V2 UI and review/publish workflow.
 - Complete attendance write workflow and schedule linkage.
 - Complete shift-swap approval lifecycle.
 - Design inventory/order schema before implementation.
