@@ -1,316 +1,52 @@
-/* MAGASIN GitHub Frontend — production client
- * GitHub Pages frontend. All backend calls go through web/api.js.
+/* MAGASIN — GitHub Pages application client
+ * Supabase is the only backend. No Apps Script, iframe bridge or Google Sheets.
  */
 (function(){
   'use strict';
-
-  const KEY_PAGE='magasin_current_page';
-  const KEY_STATE='magasin_page_state';
-  const SNAPSHOT_KEY='magasin_user_snapshot';
+  const sb=window.MAGASIN_SUPABASE;
   const $=id=>document.getElementById(id);
-  const esc=v=>String(v==null?'':v).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-
-  const PAGES={
-    dashboard:['Tổng quan','Tổng quan hoạt động hệ thống'],
-    schedule:['Nhân viên','Quản lý công việc cá nhân'],
-    attendance:['Nhân viên','Theo dõi giờ công và lịch sử chấm công'],
-    swap:['Nhân viên','Đổi ca làm việc'],
-    inventory:['Kho hàng','Quản lý hàng hóa và tồn kho'],
-    account:['Tài khoản','Thông tin cá nhân và bảo mật tài khoản'],
-    reports:['Báo cáo','Theo dõi dữ liệu hoạt động'],
-    settings:['Cài đặt','Thiết lập hệ thống']
-  };
-
-  let user=null;
-
-  function resultData(r){ return r&&r.data!==undefined?r.data:r; }
-  function messageOf(r){ return String((r&&r.message)||((r&&r.data)&&r.data.message)||''); }
-  function isOk(r){ return !!(r&&r.ok!==false&&(!r.data||r.data.ok!==false)); }
-
-  function showMessage(text,error){
-    const el=$('authMessage');
-    if(!el)return;
-    el.textContent=text||'';
-    el.className='message '+(error?'error':'success');
-  }
-
-  function showAuth(){
-    const auth=$('authShell');
-    const app=$('appShell');
-    if(auth)auth.classList.remove('hidden');
-    if(app)app.classList.add('hidden');
-  }
-
-  function hideAuth(){
-    const auth=$('authShell');
-    const app=$('appShell');
-    if(auth)auth.classList.add('hidden');
-    if(app)app.classList.remove('hidden');
-  }
-
-  function setBusy(btn,busy,label){
-    if(!btn)return;
-    if(busy){btn.disabled=true;btn.dataset.label=btn.textContent;btn.textContent=label||'Đang xử lý…';}
-    else{btn.disabled=false;btn.textContent=btn.dataset.label||btn.textContent;}
-  }
-
-  function restorePage(){
-    try{
-      const page=localStorage.getItem(KEY_PAGE)||'dashboard';
-      return PAGES[page]?page:'dashboard';
-    }catch(err){return 'dashboard';}
-  }
-
-  function persistPage(page){
-    try{
-      localStorage.setItem(KEY_PAGE,page);
-      localStorage.setItem(KEY_STATE,JSON.stringify({page,savedAt:new Date().toISOString()}));
-    }catch(err){}
-  }
-
-  function updateHeader(page){
-    const meta=PAGES[page]||PAGES.dashboard;
-    if($('pageTitle'))$('pageTitle').textContent=meta[0];
-    if($('pageDescription'))$('pageDescription').textContent=meta[1];
-  }
-
-  function role(){
-    const raw=String(user&&user.role||'STAFF').toUpperCase();
-    if(raw==='OWNER'||raw==='CHỦ CỬA HÀNG')return 'OWNER';
-    if(raw==='STORE_MANAGER'||raw==='MANAGER'||raw==='QUẢN LÝ CỬA HÀNG')return 'STORE_MANAGER';
-    if(raw==='WAREHOUSE'||raw==='INVENTORY_MANAGER'||raw==='QUẢN LÝ KHO')return 'WAREHOUSE';
-    return 'STAFF';
-  }
-
-  function roleLabel(r){
-    return ({OWNER:'Chủ hệ thống',STORE_MANAGER:'Quản lý cửa hàng',WAREHOUSE:'Quản lý kho',STAFF:'Nhân viên'})[r]||r;
-  }
-
-  function setUserUI(){
-    if(!user)return;
-    const name=user.name||user.fullName||user.username||'Người dùng';
-    const r=role();
-    if($('userName'))$('userName').textContent=name;
-    if($('userRole'))$('userRole').textContent=roleLabel(r);
-    if($('avatar'))$('avatar').textContent=name.charAt(0).toUpperCase();
-    if($('userDot')){$('userDot').title=name;$('userDot').setAttribute('aria-label',name);}
-    renderMenu();
-  }
-
-  function menuButton(page,icon,label){
-    return '<button type="button" class="drawer-btn" data-page="'+page+'"><span>'+icon+'</span><span>'+label+'</span></button>';
-  }
-
-  function renderMenu(){
-    const el=$('drawerMenu');
-    if(!el)return;
-    const r=role();
-    let html='<button type="button" class="drawer-btn" data-page="dashboard"><span>🏠</span><span>Tổng quan</span></button>';
-    if(r==='STAFF'){
-      html+='<div class="drawer-group open" data-group-container="work"><button type="button" class="drawer-parent" data-group="work"><span>Công việc</span><span class="arrow">›</span></button><div class="drawer-children">';
-      html+=menuButton('schedule','📅','Lịch làm');
-      html+=menuButton('attendance','⏱️','Chấm công');
-      html+=menuButton('swap','🔄','Đổi ca');
-      html+='</div></div>';
-      html+=menuButton('inventory','📦','Tồn hàng');
-      html+=menuButton('account','👤','Thông tin cá nhân');
-    }else{
-      html+=menuButton('inventory','📦','Kho hàng');
-      html+=menuButton('attendance','⏱️','Chấm công');
-      if(r==='OWNER'||r==='STORE_MANAGER'){html+=menuButton('reports','📊','Báo cáo');html+=menuButton('settings','⚙️','Cài đặt');}
-      html+=menuButton('account','👤','Thông tin cá nhân');
-    }
-    el.innerHTML=html;
-  }
-
-  function wireMenuEvents(){
-    const menu=$('drawerMenu');
-    if(!menu||menu.dataset.bound==='1')return;
-    menu.dataset.bound='1';
-    menu.addEventListener('click',function(e){
-      const groupBtn=e.target.closest('[data-group]');
-      if(groupBtn){const group=groupBtn.closest('.drawer-group');if(group)group.classList.toggle('open');return;}
-      const btn=e.target.closest('[data-page]');
-      if(btn)renderPage(btn.dataset.page);
-    });
-  }
-
-  function toggleDrawer(){
-    const drawer=$('drawer');const overlay=$('overlay');const hamburger=$('hamburger');
-    if(!drawer)return;
-    drawer.classList.toggle('open');
-    if(overlay)overlay.classList.toggle('active');
-    if(hamburger)hamburger.classList.toggle('open');
-  }
-
-  function closeDrawer(){
-    const drawer=$('drawer');const overlay=$('overlay');const hamburger=$('hamburger');
-    if(drawer)drawer.classList.remove('open');
-    if(overlay)overlay.classList.remove('active');
-    if(hamburger)hamburger.classList.remove('open');
-  }
-
-  async function login(e){
-    e.preventDefault();
-    const form=e.currentTarget;const btn=form.querySelector('button[type="submit"]');
-    setBusy(btn,true,'Đang đăng nhập…');showMessage('');
-    try{
-      const username=(form.username&&form.username.value||'').trim();
-      const password=(form.password&&form.password.value||'');
-      const r=await window.MAGASIN_API.call('login',{username,password});
-      if(!isOk(r))throw new Error(messageOf(r)||'Tên đăng nhập hoặc mật khẩu không đúng.');
-      const d=resultData(r)||{};
-      user=d.user||null;
-      const token=d.sessionToken||window.MAGASIN_API.getSessionToken();
-      if(!token)throw new Error('Đăng nhập thành công nhưng chưa nhận được session token.');
-      try{sessionStorage.setItem(SNAPSHOT_KEY,JSON.stringify(user||{}));}catch(err){}
-      openApp(user,restorePage());
-    }catch(err){showMessage(err.message||'Không thể đăng nhập.',true);}
-    finally{setBusy(btn,false);}
-  }
-
-  async function bootSession(){
-    const token=window.MAGASIN_API.getSessionToken();
-    if(!token)return false;
-    try{
-      try{const snap=sessionStorage.getItem(SNAPSHOT_KEY);if(snap)user=JSON.parse(snap);}catch(err){}
-      const r=await window.MAGASIN_API.call('getSession',{});
-      const d=resultData(r);
-      if(isOk(r)&&d&&d.user){
-        user=d.user;
-        try{sessionStorage.setItem(SNAPSHOT_KEY,JSON.stringify(user));}catch(err){}
-        openApp(user,restorePage());
-        return true;
-      }
-      window.MAGASIN_API.clearSession();
-      try{sessionStorage.removeItem(SNAPSHOT_KEY);}catch(err){}
-      return false;
-    }catch(err){
-      if(user){openApp(user,restorePage());return true;}
-      return false;
-    }
-  }
-
-  function openApp(u,page){
-    user=u||user||{};
-    hideAuth();
-    setUserUI();
-    renderPage(page||'dashboard');
-  }
-
-  function closeApp(){
-    closeDrawer();
-    showAuth();
-  }
-
-  function renderPage(page){
-    if(!PAGES[page])page='dashboard';
-    updateHeader(page);persistPage(page);closeDrawer();
-    document.querySelectorAll('[data-page]').forEach(btn=>btn.classList.toggle('active',btn.dataset.page===page));
-    const box=$('content');
-    if(!box)return;
-    box.innerHTML='<div class="loading-card card panel">Đang tải dữ liệu…</div>';
-    if(page==='schedule')return renderSchedule(box);
-    if(page==='attendance')return renderAttendance(box);
-    if(page==='swap')return renderSwap(box);
-    if(page==='account')return renderAccount(box);
-    if(page==='inventory')return renderSimple(box,'Kho hàng','Khu vực quản lý hàng hóa và tồn kho.');
-    if(page==='reports')return renderSimple(box,'Báo cáo','Khu vực báo cáo hoạt động.');
-    if(page==='settings')return renderSimple(box,'Cài đặt','Thiết lập hệ thống.');
-    return renderDashboard(box);
-  }
-
-  function renderDashboard(box){
-    box.innerHTML='<section class="card panel"><div class="eyebrow">MAGASIN NOIBO</div><h1>Xin chào, '+esc(user&&(user.name||user.username)||'bạn')+'!</h1><p>Frontend chạy trên GitHub Pages và backend chạy trên Google Apps Script.</p></section><div class="summary-grid"><div class="summary-card"><span>Phiên đăng nhập</span><strong>Đang hoạt động</strong></div><div class="summary-card"><span>Vai trò</span><strong>'+esc(roleLabel(role()))+'</strong></div><div class="summary-card"><span>Backend</span><strong>Apps Script</strong></div><div class="summary-card"><span>Frontend</span><strong>GitHub Pages</strong></div></div>';
-  }
-
-  function parseRows(data,keys){
-    if(Array.isArray(data))return data;
-    for(const k of keys){if(data&&Array.isArray(data[k]))return data[k];}
-    return [];
-  }
-
-  function formatTime(v){
-    if(v==null)return '';
-    const s=String(v);const m=s.match(/(?:T|\s)(\d{1,2}):(\d{2})/);
-    return m?String(m[1]).padStart(2,'0')+':'+m[2]:s;
-  }
-
-  async function renderSchedule(box){
-    try{
-      const r=await window.MAGASIN_API.call('getMySchedule',{});
-      if(!isOk(r))throw new Error(messageOf(r)||'Không tải được lịch làm.');
-      const d=resultData(r)||{};const rows=parseRows(d,['schedules','records','data']);
-      box.innerHTML='<section class="card panel"><div class="toolbar"><div><h2>Lịch làm việc</h2><p>Lịch làm trong tuần.</p></div></div><div id="scheduleGrid" class="week-grid"></div></section>';
-      const grid=$('scheduleGrid');if(!grid)return;
-      const monday=new Date();const day=monday.getDay();monday.setDate(monday.getDate()-(day===0?6:day-1));monday.setHours(0,0,0,0);
-      const names=['THỨ HAI','THỨ BA','THỨ TƯ','THỨ NĂM','THỨ SÁU','THỨ BẢY','CHỦ NHẬT'];
-      grid.innerHTML=names.map((name,i)=>{
-        const date=new Date(monday);date.setDate(monday.getDate()+i);
-        const key=date.getFullYear()+'-'+String(date.getMonth()+1).padStart(2,'0')+'-'+String(date.getDate()).padStart(2,'0');
-        const same=rows.filter(x=>String(x.date||x.Ngay||'').slice(0,10)===key);
-        const shifts=same.map(x=>{
-          const start=formatTime(x.start||x.startTime||x['Giờ bắt đầu']);const end=formatTime(x.end||x.endTime||x['Giờ kết thúc']);const h=Number(start.slice(0,2));const cls=h<12?'m':h<17?'a':'e';
-          return '<div class="shift '+cls+'">'+esc(start+'-'+end)+'</div>';
-        }).join('');
-        return '<div class="day"><div class="day-head"><strong>'+name+'</strong><span>'+date.toLocaleDateString('vi-VN')+'</span></div><div class="shifts">'+(shifts||'<div class="empty">Chưa có ca</div>')+'</div></div>';
-      }).join('');
-    }catch(err){box.innerHTML='<section class="card panel"><h2>Lịch làm việc</h2><div class="error-box">'+esc(err.message)+'</div></section>';}
-  }
-
-  async function renderAttendance(box){
-    try{
-      const r=await window.MAGASIN_API.call('getAttendanceHistory',{});
-      if(!isOk(r))throw new Error(messageOf(r)||'Không tải được lịch sử chấm công.');
-      const rows=parseRows(resultData(r)||{},['records','history','data']);
-      box.innerHTML='<section class="card panel"><h2>Chấm công</h2><p>Lịch sử chấm công của tài khoản.</p><div class="table-wrap"><table class="table"><thead><tr><th>Ngày</th><th>Check-in</th><th>Check-out</th><th>Trạng thái</th></tr></thead><tbody>'+(rows.length?rows.map(x=>'<tr><td>'+esc(x.date||x.Ngay||'')+'</td><td>'+esc(x.checkIn||x['Check-in']||'')+'</td><td>'+esc(x.checkOut||x['Check-out']||'')+'</td><td>'+esc(x.status||x['Trạng thái']||'')+'</td></tr>').join(''):'<tr><td colspan="4">Chưa có lịch sử chấm công.</td></tr>')+'</tbody></table></div></section>';
-    }catch(err){box.innerHTML='<section class="card panel"><h2>Chấm công</h2><div class="error-box">'+esc(err.message)+'</div></section>';}
-  }
-
-  async function renderSwap(box){
-    try{
-      const r=await window.MAGASIN_API.call('getMyShiftSwapRequests',{});
-      if(!isOk(r))throw new Error(messageOf(r)||'Không tải được yêu cầu đổi ca.');
-      const rows=parseRows(resultData(r)||{},['requests','records','data']);
-      box.innerHTML='<section class="card panel"><h2>Đổi ca</h2><p>Danh sách yêu cầu đổi ca.</p>'+(rows.length?rows.map(x=>'<div class="data-row"><span>'+esc(x.date||x.Ngay||'')+'</span><span>'+esc(x.status||x['Trạng thái']||'')+'</span></div>').join(''):'<div class="empty-state">Chưa có yêu cầu đổi ca.</div>')+'</section>';
-    }catch(err){box.innerHTML='<section class="card panel"><h2>Đổi ca</h2><div class="error-box">'+esc(err.message)+'</div></section>';}
-  }
-
-  function renderAccount(box){
-    box.innerHTML='<section class="card panel"><h2>Thông tin cá nhân</h2><div class="profile-grid"><div><span>Họ tên</span><strong>'+esc(user&&(user.name||user.fullName)||'')+'</strong></div><div><span>Tên đăng nhập</span><strong>'+esc(user&&user.username||'')+'</strong></div><div><span>Email</span><strong>'+esc(user&&user.email||'')+'</strong></div><div><span>Số điện thoại</span><strong>'+esc(user&&user.phone||'')+'</strong></div></div></section>';
-  }
-
-  function renderSimple(box,title,text){box.innerHTML='<section class="card panel"><h2>'+esc(title)+'</h2><p>'+esc(text)+'</p></section>';}
-
-  async function logout(){
-    try{await window.MAGASIN_API.call('logout',{});}catch(err){}
-    window.MAGASIN_API.clearSession();
-    try{sessionStorage.removeItem(SNAPSHOT_KEY);}catch(err){}
-    user=null;
-    closeApp();
-    showMessage('Bạn đã đăng xuất.');
-  }
-
-  function bindOptionalAuthLinks(){
-    document.querySelectorAll('[data-auth-view]').forEach(a=>a.addEventListener('click',function(e){
-      e.preventDefault();
-      document.querySelectorAll('.auth-view').forEach(v=>v.classList.toggle('active',v.id==='auth-'+this.dataset.authView));
-    }));
-  }
-
-  async function boot(){
-    showAuth();
-    const loginForm=$('loginForm');if(loginForm&&!loginForm.dataset.bound){loginForm.dataset.bound='1';loginForm.addEventListener('submit',login);}
-    if($('hamburger'))$('hamburger').addEventListener('click',toggleDrawer);
-    if($('overlay'))$('overlay').addEventListener('click',closeDrawer);
-    if($('logoutBtn'))$('logoutBtn').addEventListener('click',logout);
-    if($('loginEye')&&$('password'))$('loginEye').addEventListener('click',function(){const p=$('password');p.type=p.type==='password'?'text':'password';this.textContent=p.type==='password'?'◉':'◌';});
-    renderMenu();wireMenuEvents();bindOptionalAuthLinks();
-    let restored=false;
-    try{restored=await bootSession();}catch(err){restored=false;}
-    if(!restored)showAuth();
-  }
-
-  window.MAGASIN_WEB={renderPage,logout};
+  const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  const roles={OWNER:'Chủ hệ thống',STORE_MANAGER:'Quản lý cửa hàng',INVENTORY_MANAGER:'Quản lý kho',STAFF:'Nhân viên'};
+  let profile=null;
+  if(!sb) throw new Error('Supabase chưa sẵn sàng.');
+  function msg(text,error=false){const el=$('authMessage');if(el){el.textContent=text||'';el.className='message '+(error?'error':'success');}}
+  function view(name){document.querySelectorAll('.auth-view').forEach(v=>v.classList.toggle('active',v.id==='auth-'+name));}
+  function weekStart(base=new Date()){const d=new Date(base);d.setHours(12,0,0,0);const day=d.getDay();d.setDate(d.getDate()-(day===0?6:day-1));return d;}
+  function dateKey(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+  function fmtDate(d){return new Intl.DateTimeFormat('vi-VN',{day:'2-digit',month:'2-digit'}).format(d);}
+  function fmtRange(a,b){return fmtDate(a)+' – '+fmtDate(b);}
+  async function loadProfile(user){const {data,error}=await sb.from('profiles').select('id,username,full_name,email,phone,role,status,access_scope').eq('id',user.id).single();if(error)throw new Error('Không tải được hồ sơ: '+error.message);profile=data;return data;}
+  function role(){return String(profile?.role||'STAFF').toUpperCase();}
+  function manager(){return ['OWNER','STORE_MANAGER'].includes(role());}
+  async function login(e){e.preventDefault();const f=e.currentTarget,b=f.querySelector('button[type=submit]');b.disabled=true;b.textContent='Đang đăng nhập…';msg('');try{const username=f.username.value.trim(),password=f.password.value;if(!username||!password)throw new Error('Vui lòng nhập tên đăng nhập và mật khẩu.');let email=username;if(!username.includes('@')){const {data,error}=await sb.rpc('resolve_login_email',{p_username:username});if(error)throw error;if(!data)throw new Error('Tên đăng nhập không tồn tại.');email=data;}const {data,error}=await sb.auth.signInWithPassword({email,password});if(error)throw new Error('Tên đăng nhập hoặc mật khẩu không đúng.');const p=await loadProfile(data.user);if(String(p.status).toUpperCase()==='INACTIVE'){await sb.auth.signOut();throw new Error('Tài khoản MAGASIN đang bị vô hiệu hóa.');}await openApp(p);}catch(err){msg(err.message||'Không thể đăng nhập.',true);}finally{b.disabled=false;b.textContent='Đăng nhập';}}
+  async function register(e){e.preventDefault();const f=e.currentTarget,b=f.querySelector('button[type=submit]');b.disabled=true;b.textContent='Đang đăng ký…';msg('');try{const d={fullName:f.fullName.value.trim(),phone:f.phone.value.trim(),email:f.email.value.trim(),username:f.username.value.trim(),password:f.password.value};if(!d.fullName||!d.email||!d.username||!d.password)throw new Error('Vui lòng nhập đầy đủ thông tin đăng ký.');if(d.password.length<8)throw new Error('Mật khẩu phải có ít nhất 8 ký tự.');const {data,error}=await sb.auth.signUp({email:d.email,password:d.password,options:{emailRedirectTo:location.origin+location.pathname+'?auth=verify',data:{username:d.username,full_name:d.fullName,phone:d.phone}}});if(error)throw error;f.reset();view('login');msg(data.session?'Đăng ký thành công. Tài khoản đang chờ quản lý kích hoạt.':'Đăng ký thành công. Hãy kiểm tra email và bấm liên kết xác nhận.',false);}catch(err){msg(err.message||'Không thể đăng ký.',true);}finally{b.disabled=false;b.textContent='Đăng ký';}}
+  async function forgot(e){e.preventDefault();const f=e.currentTarget,b=f.querySelector('button[type=submit]');b.disabled=true;b.textContent='Đang gửi…';msg('');try{const email=f.email.value.trim();if(!email)throw new Error('Vui lòng nhập email.');const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname+'?auth=reset'});if(error)throw error;msg('Nếu email tồn tại, hướng dẫn đặt lại mật khẩu đã được gửi. Hãy kiểm tra hộp thư.',false);}catch(err){msg(err.message||'Không thể gửi email.',true);}finally{b.disabled=false;b.textContent='Gửi hướng dẫn';}}
+  async function reset(e){e.preventDefault();const f=e.currentTarget,b=f.querySelector('button[type=submit]');b.disabled=true;b.textContent='Đang cập nhật…';msg('');try{const p=f.password.value,c=f.confirmPassword.value;if(p.length<8)throw new Error('Mật khẩu mới phải có ít nhất 8 ký tự.');if(p!==c)throw new Error('Mật khẩu nhập lại không khớp.');const {error}=await sb.auth.updateUser({password:p});if(error)throw error;await sb.auth.signOut();history.replaceState({},document.title,location.origin+location.pathname);view('login');msg('Đã cập nhật mật khẩu. Bạn có thể đăng nhập bằng mật khẩu mới.');}catch(err){msg(err.message||'Không thể cập nhật mật khẩu.',true);}finally{b.disabled=false;b.textContent='Tạo mật khẩu mới';}}
+  function hideAuth(){ $('authShell')?.classList.add('hidden');$('appShell')?.classList.remove('hidden');}
+  function showAuth(){ $('appShell')?.classList.add('hidden');$('authShell')?.classList.remove('hidden');}
+  function setUserUi(){ $('userName').textContent=profile.full_name||profile.username;$('userRole').textContent=roles[role()]||role();$('avatar').textContent=(profile.full_name||profile.username||'U').charAt(0).toUpperCase();}
+  function renderMenu(){let h='<button class="drawer-btn" data-page="dashboard"><span>🏠</span><span>Tổng quan</span></button><button class="drawer-btn" data-page="schedule"><span>📅</span><span>Lịch làm</span></button><button class="drawer-btn" data-page="attendance"><span>⏱️</span><span>Chấm công</span></button><button class="drawer-btn" data-page="swap"><span>🔄</span><span>Đổi ca</span></button><button class="drawer-btn" data-page="account"><span>👤</span><span>Thông tin cá nhân</span></button>';if(manager())h+='<button class="drawer-btn" data-page="management"><span>👥</span><span>Nhân sự</span></button>';if(role()==='OWNER')h+='<button class="drawer-btn" data-page="staffing"><span>🎯</span><span>Nhu cầu nhân sự</span></button>';$("drawerMenu").innerHTML=h;}
+  async function openApp(p){profile=p;hideAuth();setUserUi();renderMenu();if(String(profile.status).toUpperCase()==='PENDING'){await renderPending();return;}renderPage('dashboard');}
+  async function renderPending(){ $('pageTitle').textContent='Chờ duyệt';$('pageDescription').textContent='Trạng thái quyền truy cập';const box=$('content');box.innerHTML='<section class="card panel pending-panel"><div class="status-icon">⏳</div><div class="eyebrow">TÀI KHOẢN MAGASIN</div><h1>Đang chờ quản lý duyệt</h1><p>Email của bạn đã được xác thực. Tài khoản chưa được cấp quyền truy cập.</p><div class="pending-meta"><div><span>Nhân viên</span><strong>'+esc(profile.full_name)+'</strong></div><div><span>Tên đăng nhập</span><strong>'+esc(profile.username)+'</strong></div></div><div id="approvalState" class="approval-box">Đang kiểm tra…</div><div class="action-row"><button id="requestApproval" class="primary-action">Gửi yêu cầu duyệt</button><button id="pendingLogout" class="secondary-action">Đăng xuất</button></div></section>';await refreshApproval();$('requestApproval').onclick=submitApproval;$('pendingLogout').onclick=logout;}
+  async function refreshApproval(){const box=$('approvalState'),btn=$('requestApproval');try{const {data,error}=await sb.rpc('get_my_approval_status');if(error)throw error;const r=data?.request;if(String(data?.profile_status).toUpperCase()==='ACTIVE'){return openApp(await loadProfile((await sb.auth.getUser()).data.user));}if(r?.status==='PENDING'){box.innerHTML='<strong>🟡 Đã gửi yêu cầu</strong><span>Yêu cầu đang chờ quản lý xử lý.</span>';btn.disabled=true;btn.textContent='Đã gửi yêu cầu';}else if(r?.status==='REJECTED'){box.innerHTML='<strong>🔴 Yêu cầu chưa được chấp thuận</strong><span>'+esc(r.note||'Bạn có thể gửi lại yêu cầu.')+'</span>';btn.disabled=false;btn.textContent='Gửi lại yêu cầu';}else{box.innerHTML='<strong>⚪ Chưa gửi yêu cầu</strong><span>Hãy gửi yêu cầu để quản lý có thể xét duyệt.</span>';btn.disabled=false;btn.textContent='Gửi yêu cầu duyệt';}}catch(err){box.textContent='Không thể tải trạng thái duyệt: '+err.message;}}
+  async function submitApproval(){const b=$('requestApproval');b.disabled=true;b.textContent='Đang gửi…';try{const {error}=await sb.rpc('submit_approval_request');if(error)throw error;await refreshApproval();}catch(err){$('approvalState').textContent=err.message;b.disabled=false;}}
+  async function renderPage(page){if(String(profile.status).toUpperCase()!=='ACTIVE')return renderPending();const meta={dashboard:['Tổng quan','Tổng quan hoạt động'],schedule:['Lịch làm','Lịch làm việc cá nhân'],attendance:['Chấm công','Giờ công và lịch sử'],swap:['Đổi ca','Yêu cầu đổi ca'],account:['Thông tin cá nhân','Hồ sơ tài khoản'],management:['Nhân sự','Lịch và trạng thái nhân sự'],staffing:['Nhu cầu nhân sự','Định biên theo thời gian']};$('pageTitle').textContent=meta[page]?.[0]||'MAGASIN';$('pageDescription').textContent=meta[page]?.[1]||'';document.querySelectorAll('[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===page));closeDrawer();const box=$('content');box.innerHTML='<div class="loading-card">Đang tải…</div>';if(page==='dashboard')return dashboard(box);if(page==='schedule')return schedule(box);if(page==='attendance')return attendance(box);if(page==='management')return management(box);if(page==='staffing')return staffing(box);if(page==='account')return account(box);return simple(box,page==='swap'?'Đổi ca':'MAGASIN','Module đang được hoàn thiện trên Supabase.');}
+  function dashboard(box){box.innerHTML='<section class="card panel"><div class="eyebrow">MAGASIN NOIBO</div><h1>Xin chào, '+esc(profile.full_name||profile.username)+'!</h1><p>Supabase là backend duy nhất của hệ thống.</p></section><div class="summary-grid"><div class="summary-card"><span>Vai trò</span><strong>'+esc(roles[role()]||role())+'</strong></div><div class="summary-card"><span>Trạng thái</span><strong>Đang hoạt động</strong></div><div class="summary-card"><span>Phạm vi</span><strong>'+esc(profile.access_scope||'Chưa cấu hình')+'</strong></div></div>';}
+  async function schedule(box){try{const {data,error}=await sb.rpc('get_my_schedule');if(error)throw error;const rows=Array.isArray(data)?data:[];const m=weekStart(),days=['Thứ Hai','Thứ Ba','Thứ Tư','Thứ Năm','Thứ Sáu','Thứ Bảy','Chủ Nhật'];box.innerHTML='<section class="card panel"><div class="section-head"><div><h2>Lịch làm việc tuần này</h2><p>'+fmtRange(m,new Date(m.getTime()+6*864e5))+'</p></div></div><div class="week-grid">'+days.map((n,i)=>{const d=new Date(m.getTime()+i*864e5),k=dateKey(d),items=rows.filter(x=>String(x.date).slice(0,10)===k&&String(x.status).toUpperCase()==='APPROVED');return '<div class="day"><div class="day-head"><strong>'+n+'</strong><span>'+fmtDate(d)+'</span></div>'+(items.length?items.map(x=>'<div class="shift-card '+(Number(String(x.start).slice(0,2))<12?'morning':Number(String(x.start).slice(0,2))<17?'afternoon':'evening')+'"><b>'+esc(x.start)+'–'+esc(x.end)+'</b><small>'+esc(x.store_name||x.store_code||'')+'</small></div>').join(''):'<div class="empty">Chưa có ca</div>')+'</div>';}).join('')+'</div><div class="accordion" id="availabilityBox"><button class="accordion-toggle" type="button"><span>📝 Đăng ký thời gian có thể làm tuần tới</span><span>⌄</span></button><div class="accordion-body"><p>Chọn khoảng giờ bạn có thể làm. Không giới hạn theo ca cố định.</p><div id="availabilityDays"></div></div></div></section>';buildAvailability();}catch(err){box.innerHTML='<section class="card panel"><h2>Lịch làm việc</h2><div class="error-box">'+esc(err.message)+'</div></section>';}}
+  function timeOptions(selected){let h='<option value="">Chọn giờ</option>';for(let i=0;i<24;i++)for(const mm of ['00','30']){const v=String(i).padStart(2,'0')+':'+mm;h+='<option value="'+v+'" '+(v===selected?'selected':'')+'>'+v+'</option>';}return h;}
+  function buildAvailability(){const root=$('availabilityDays');const m=weekStart(new Date(Date.now()+7*864e5)),names=['T2','T3','T4','T5','T6','T7','CN'];root.innerHTML=names.map((n,i)=>{const d=new Date(m.getTime()+i*864e5),k=dateKey(d);return '<div class="availability-row"><div class="availability-day"><b>'+n+'</b><span>'+fmtDate(d)+'</span></div><select data-start="'+k+'">'+timeOptions('06:00')+'</select><span>→</span><select data-end="'+k+'">'+timeOptions('14:00')+'</select><button class="small-action" data-save="'+k+'">Lưu</button></div>';}).join('');$('availabilityBox').querySelector('.accordion-toggle').onclick=()=>$('availabilityBox').classList.toggle('open');root.querySelectorAll('[data-save]').forEach(b=>b.onclick=()=>saveAvailability(b.dataset.save));}
+  async function saveAvailability(day){const a=document.querySelector('[data-start="'+day+'"]').value,b=document.querySelector('[data-end="'+day+'"]').value;if(!a||!b||a>=b)return alert('Vui lòng chọn khoảng giờ hợp lệ.');const {data:stores,error}=await sb.from('stores').select('id,code,name').eq('status','ACTIVE');if(error)throw error;const store=stores?.[0];if(!store)return alert('Chưa có cửa hàng hoạt động trong hệ thống.');const {error:insertError}=await sb.from('employee_availability').insert({user_id:profile.id,work_date:day,start_time:a,end_time:b,preferred_store_id:store.id,availability_type:'AVAILABLE'});if(insertError)return alert('Không thể lưu: '+insertError.message);alert('Đã lưu thời gian có thể làm.');}
+  async function attendance(box){try{const {data,error}=await sb.rpc('get_my_attendance');if(error)throw error;const rows=Array.isArray(data)?data:[];box.innerHTML='<section class="card panel"><h2>Chấm công</h2><p>Lịch sử chấm công của bạn.</p><div class="table-wrap"><table class="table"><thead><tr><th>Ngày</th><th>Check-in</th><th>Check-out</th><th>Giờ công</th><th>Trạng thái</th></tr></thead><tbody>'+(rows.length?rows.map(x=>'<tr><td>'+esc(x.date)+'</td><td>'+esc(x.checkIn)+'</td><td>'+esc(x.checkOut)+'</td><td>'+esc(x.hours_worked||'0')+'</td><td>'+esc(x.status)+'</td></tr>').join(''):'<tr><td colspan="5">Chưa có dữ liệu.</td></tr>')+'</tbody></table></div></section>';}catch(err){box.innerHTML='<section class="card panel"><h2>Chấm công</h2><div class="error-box">'+esc(err.message)+'</div></section>';}}
+  async function management(box){if(role()!=='OWNER')return simple(box,'Nhân sự','Quản lý cửa hàng sẽ dùng bảng lịch nhân sự theo phạm vi được cấp. Khu vực duyệt tài khoản hiện thuộc OWNER.');try{const {data,error}=await sb.rpc('list_pending_approval_requests');if(error)throw error;const rows=Array.isArray(data)?data:[];box.innerHTML='<section class="card panel"><h2>Yêu cầu duyệt tài khoản</h2><p>OWNER duyệt tài khoản mới trước khi cấp quyền.</p><div class="approval-list">'+(rows.length?rows.map(x=>'<div class="approval-item"><div><strong>'+esc(x.full_name)+'</strong><span>'+esc(x.username)+' · '+esc(x.email)+'</span></div><div class="action-row"><button class="small-action approve" data-approve="'+esc(x.id)+'">Duyệt</button><button class="small-action reject" data-reject="'+esc(x.id)+'">Từ chối</button></div></div>').join(''):'<div class="empty">Không có yêu cầu chờ duyệt.</div>')+'</div></section>';box.querySelectorAll('[data-approve]').forEach(b=>b.onclick=()=>review(b.dataset.approve,'APPROVED'));box.querySelectorAll('[data-reject]').forEach(b=>b.onclick=()=>review(b.dataset.reject,'REJECTED'));}catch(err){box.innerHTML='<section class="card panel"><h2>Nhân sự</h2><div class="error-box">'+esc(err.message)+'</div></section>';}}
+  async function review(id,decision){const note=decision==='REJECTED'?(prompt('Lý do từ chối:','')||''):'';try{const {error}=await sb.rpc('review_approval_request',{p_request_id:id,p_decision:decision,p_note:note});if(error)throw error;renderPage('management');}catch(err){alert(err.message);}}
+  async function staffing(box){if(role()!=='OWNER')return simple(box,'Nhu cầu nhân sự','Chỉ OWNER cấu hình.');const {data,error}=await sb.from('staffing_requirements').select('id,work_date,start_time,end_time,minimum_headcount,target_headcount,maximum_headcount,min_skill_level,skill_code,stores(code,name)').order('work_date').order('start_time');if(error)return simple(box,'Nhu cầu nhân sự',error.message);box.innerHTML='<section class="card panel"><h2>Nhu cầu nhân sự</h2><p>Định biên theo cửa hàng và khoảng thời gian.</p><div class="table-wrap"><table class="table"><thead><tr><th>Ngày</th><th>Cửa hàng</th><th>Giờ</th><th>Min</th><th>Target</th><th>Max</th><th>Skill</th></tr></thead><tbody>'+(data||[]).map(x=>'<tr><td>'+esc(x.work_date)+'</td><td>'+esc(x.stores?.name||x.store_id)+'</td><td>'+esc(x.start_time)+'–'+esc(x.end_time)+'</td><td>'+x.minimum_headcount+'</td><td>'+x.target_headcount+'</td><td>'+x.maximum_headcount+'</td><td>'+esc(x.skill_code||'Tổng hợp')+'</td></tr>').join('')+'</tbody></table></div></section>';}
+  function account(box){box.innerHTML='<section class="card panel"><h2>Thông tin cá nhân</h2><div class="profile-grid"><div><span>Họ tên</span><strong>'+esc(profile.full_name)+'</strong></div><div><span>Tên đăng nhập</span><strong>'+esc(profile.username)+'</strong></div><div><span>Email</span><strong>'+esc(profile.email)+'</strong></div><div><span>Số điện thoại</span><strong>'+esc(profile.phone)+'</strong></div></div></section>';}
+  function simple(box,title,text){box.innerHTML='<section class="card panel"><h2>'+esc(title)+'</h2><p>'+esc(text)+'</p></section>';}
+  function closeDrawer(){ $('drawer')?.classList.remove('open');$('overlay')?.classList.remove('active');}
+  async function logout(){try{await sb.auth.signOut();}finally{profile=null;showAuth();view('login');msg('Bạn đã đăng xuất.');}}
+  function toggleDrawer(){$('drawer')?.classList.toggle('open');$('overlay')?.classList.toggle('active');}
+  function bind(){ $('loginForm').addEventListener('submit',login);$('registerForm').addEventListener('submit',register);$('forgotForm').addEventListener('submit',forgot);$('resetForm').addEventListener('submit',reset);document.addEventListener('click',e=>{const a=e.target.closest('[data-auth-view]');if(a){e.preventDefault();view(a.dataset.authView);msg('');}const p=e.target.closest('[data-page]');if(p)renderPage(p.dataset.page);});$('hamburger').onclick=toggleDrawer;$('overlay').onclick=closeDrawer;$('logoutBtn').onclick=logout;document.querySelectorAll('[data-password-toggle]').forEach(b=>b.onclick=()=>{const i=b.parentElement.querySelector('input');const visible=i.type==='text';i.type=visible?'password':'text';b.parentElement.classList.toggle('is-visible',!visible);});}
+  async function boot(){bind();const params=new URLSearchParams(location.search);if(params.get('auth')==='reset')view('reset');const {data}=await sb.auth.getSession();if(data.session){try{const p=await loadProfile(data.session.user);if(params.get('auth')==='verify'){profile=p;await sb.auth.signOut();history.replaceState({},document.title,location.origin+location.pathname);return openApp(p);}return openApp(p);}catch(err){await sb.auth.signOut();}}}
+  sb.auth.onAuthStateChange(event=>{if(event==='PASSWORD_RECOVERY')view('reset');});
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
