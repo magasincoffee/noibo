@@ -65,3 +65,23 @@ test('weekly cap forces distribution', () => {
   assert.equal(draft.assignments.filter(a => a.user_id === 'u1').length, 1);
   assert.equal(draft.assignments.filter(a => a.user_id === 'u2').length, 1);
 });
+
+test('minimum rest is enforced across Sunday to Monday', () => {
+  const draft = generate(input({
+    employee_constraints: [
+      { user_id: 'u1', max_daily_hours: 8, max_weekly_hours: 20, min_rest_hours: 8, allowed_store_ids: ['s1'], preferred_store_id: 's1' },
+      { user_id: 'u2', max_daily_hours: 8, max_weekly_hours: 20, min_rest_hours: 8, allowed_store_ids: ['s1'], preferred_store_id: 's1' },
+    ],
+    employee_availability: [
+      { user_id: 'u1', work_date: '2026-08-23', start_time: '20:00', end_time: '23:00', availability_type: 'AVAILABLE' },
+      { user_id: 'u1', work_date: '2026-08-24', start_time: '04:00', end_time: '08:00', availability_type: 'AVAILABLE' },
+      { user_id: 'u2', work_date: '2026-08-24', start_time: '04:00', end_time: '08:00', availability_type: 'AVAILABLE' },
+    ],
+    staffing_requirements: [
+      { id: 'r1', store_id: 's1', work_date: '2026-08-23', start_time: '20:00', end_time: '23:00', minimum_headcount: 1, target_headcount: 1, maximum_headcount: 1 },
+      { id: 'r2', store_id: 's1', work_date: '2026-08-24', start_time: '04:00', end_time: '08:00', minimum_headcount: 1, target_headcount: 1, maximum_headcount: 1 },
+    ],
+  }));
+  const monday = draft.assignments.find(a => a.requirement_id === 'r2');
+  assert.equal(monday.user_id, 'u2');
+});
