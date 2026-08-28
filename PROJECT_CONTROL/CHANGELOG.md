@@ -1,5 +1,43 @@
 # CHANGELOG
 
+## 2026-08-28 — WORKFORCE V2 PHASE 7 MANAGER / OWNER UI
+- Added `web/manager-workforce-ui.js` for manager/OWNER Workforce operations.
+- Added weekly staffing-demand view with store/week navigation.
+- Added staffing requirement create/update through `upsert_workforce_staffing_requirement`.
+- Added generation discovery through `list_schedule_generations`.
+- Added DRAFT generation creation through `create_schedule_generation`.
+- Added draft assignment review table through `get_schedule_generation_assignments`.
+- Added manager/OWNER Workforce navigation entry without replacing the existing HR/approval module.
+- Kept REVIEWED/PUBLISHED transitions and official `work_schedules` mutation out of Phase 7.
+
+## 2026-08-28 — WORKFORCE V2 PHASE 6 EMPLOYEE UI
+- Added `web/workforce-ui.js` as the employee-facing Workforce V2 schedule surface.
+- Replaced the employee schedule view through a narrow additive UI layer without rewriting the existing application shell.
+- Employee can view approved official schedules week-by-week.
+- Employee can navigate previous/current/next scheduling weeks.
+- Employee can view date-specific availability windows from Supabase.
+- Employee can add multiple availability windows per day.
+- Employee can select `AVAILABLE`, `PREFERRED` or `UNAVAILABLE` for each window.
+- Employee can choose a preferred store or no preferred store.
+- Employee can delete their own availability through controlled RPCs.
+- Updated `web/supabase-config.js` to load the Workforce UI layer after the application shell initializes.
+- Kept manager/OWNER generation/review/publish flows and official `work_schedules` mutation out of Phase 6.
+
+## 2026-08-28 — WORKFORCE V2 PHASE 5 SUPABASE RPC/API
+- Added controlled Supabase RPCs for employee availability self-service.
+- Added controlled Workforce staffing-demand read/write APIs with server-side store scope and data validation.
+- Added scheduler generation creation/read/cancel APIs for DRAFT generations.
+- Added atomic replacement of generation assignments with structural checks for generation week, store scope, active employees and employee overlap.
+- Added deterministic generation assignment read API with employee/store display metadata.
+- Explicitly kept REVIEWED/PUBLISHED transitions out of Phase 5 until final validation/revalidation and publish transaction are implemented.
+- Explicitly kept official `work_schedules` untouched by Phase 5 RPCs.
+- Revoked RPC execution from `anon`/`public`; authenticated callers are checked server-side.
+- Added `docs/architecture/MAGASIN_WORKFORCE_RPC_API_V1.md` as the frontend/API contract.
+
+## 2026-08-28 — WORKFORCE V2 PHASE 0-4 CLEAN CHECKPOINTS
+- Rebuilt Phase 0-4 branches from a clean `main` lineage after closing earlier noisy draft PRs.
+- Kept scheduler engine and validation package separated from Supabase mutation/publish paths.
+
 ## 2026-08-27 — CLEAN GITHUB → APPS SCRIPT SYNC V2
 - Replaced the previous merge-style synchronization model with an exact canonical project replacement model.
 - Added `PROJECT_CONTROL/appsscript.json` as the canonical Apps Script manifest.
@@ -26,4 +64,4 @@
 - Added README and documentation folders.
 
 ## Working rule
-Use GitHub `main` as source of truth. Use feature branches for larger changes and review before merging. Do not remove the Apps Script fallback until production smoke tests are complete.
+Use GitHub `main` as source of truth. Use feature branches for larger changes and review before merging. Do not reintroduce Apps Script as a backend for new Workforce work.

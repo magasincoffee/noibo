@@ -1,97 +1,74 @@
 # MAGASIN DEPENDENCY MAP
 
-## Production runtime
-`15_Ứng_dụng_web.gs`
-→ `?source=github`
-→ `18_GitHub_Frontend_Loader.gs`
-→ GitHub `main/frontend/*`
-→ HtmlService
-→ `google.script.run`
-→ backend business modules
-→ Google Sheets
+## Canonical production runtime
+`web/index.html`
+→ `web/supabase-config.js`
+→ `web/app.js`
+→ Supabase Auth / PostgreSQL / RPC
+→ business modules
 
-## Frontend shell
-`frontend/Index.html`
-→ `_styles.html`
-→ `_auth.html`
-→ `_schedule.html`
-→ `_attendance.html`
-→ `_management.html`
+GitHub Pages `web/` is the production frontend transport. Supabase is the production backend. Apps Script, Google Sheets and `google.script.run` are retired and must not be reintroduced for new work.
 
-## Authentication / session / role
-`_auth.html`
-→ `03_Đăng_nhập_xác_thực.gs`
-→ `04_Khôi_phục_mật_khẩu.gs`
-→ `05_Phiên_đăng_nhập.gs`
-→ `06_Hồ_sơ_nhân_viên.gs`
-→ `07_Phân_quyền.gs`
-→ `08_Quản_lý_người_dùng.gs`
+## Workforce / Schedule
+`web/app.js`
+→ `get_my_schedule()`
+→ `work_schedules`
 
-`05_Phiên_đăng_nhập.gs`
-→ `findUserRowByUsername_()` from module 06
-→ current `Người dùng` Sheet
-→ refresh role/status/accessScope for live session validation
+Workforce V2:
 
-`07_Phân_quyền.gs`
-→ canonical page permission list
-→ canonical capability list
-→ manager/store scope guard
+`employee_availability`
++ `employee_skills`
++ `employee_constraints`
++ `staffing_requirements`
+→ deterministic scheduler
+→ `schedule_generation_runs`
+→ `schedule_generation_assignments`
+→ independent validation
+→ manager review
+→ transactional publish
+→ `work_schedules`
+→ attendance linkage
 
-## Schedule
-`_schedule.html`
-→ `09_Lịch_làm_việc.gs`
-→ `07_Phân_quyền.gs`
-→ `10_Chấm_công.gs` for planned-shift integration
+Canonical semantics:
+- `docs/architecture/MAGASIN_WORKFORCE_ARCHITECTURE_V2.md`
+- `docs/architecture/MAGASIN_SCHEDULER_RULES_V1.md`
 
 ## Attendance
-`_attendance.html`
-→ `10_Chấm_công.gs`
-→ `09_Lịch_làm_việc.gs`
+`web/app.js`
+→ `get_my_attendance()`
+→ `attendance`
+→ official `work_schedules` for planning linkage
 
-## Management
-`_management.html`
-→ `07_Phân_quyền.gs`
-→ `08_Quản_lý_người_dùng.gs`
-→ `09_Lịch_làm_việc.gs`
-
-## Employee profile
-`_auth.html`
-→ `06_Hồ_sơ_nhân_viên.gs`
-→ `05_Phiên_đăng_nhập.gs`
+Historical attendance must not be silently rewritten by later schedule changes.
 
 ## Shift swap
-`_auth.html`
-→ `11_Đổi_ca.gs`
+`web/app.js`
+→ `get_my_shift_swaps()`
+→ `shift_swaps`
 
-Current limitation: module 11 supports employee submit/read only; manager approval lifecycle is not yet implemented.
+Manager approval and schedule reconciliation remain later work.
+
+## Management
+`web/app.js`
+→ `profiles`
+→ `stores`
+→ `work_schedules`
+→ Workforce V2 RPCs
 
 ## KPI
-`_auth.html`
-→ `12_KPI.gs`
-
-Current limitation: employee read-only `getMyKpi()` only.
+`kpi_records`
 
 ## Inventory
-`_auth.html`
-→ `13_Kho_hàng.gs`
+Inventory schema/operations are intentionally separate from Workforce V2.
 
-Current limitation: backend is a documented stub and does not yet implement stock operations.
+## Printer
+`web/app.js`
+→ future durable `print_jobs`
+→ local `print-agent/`
+→ LAN
+→ HPRT TL31E
 
-## Reports
-`14_Báo_cáo.gs`
-→ `10_Chấm_công.gs` attendance reporting functions
+## Database migration rule
+All database changes are represented by SQL migrations under `supabase/migrations/`.
 
-## Shared backend foundation
-Most backend modules depend on:
-- `01_Cấu_hình_hệ_thống.gs`
-- `02_Nền_tảng_hệ_thống.gs`
-
-## GitHub Pages experiment — NON-PRODUCTION
-`web/index.html`
-→ `web/api.js`
-→ legacy bridge files
-
-The GitHub Pages experiment is retained for visual/reference testing only. It is not the production transport.
-
-## Migration rule
-GitHub `main` is the source of truth. Apps Script is the production runtime. Do not remove `frontend/` or the Apps Script loader until the full production smoke-test suite is complete.
+`main` is the repository source of truth. Feature work uses a reviewable branch before merge.
