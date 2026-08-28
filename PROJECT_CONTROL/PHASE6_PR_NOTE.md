@@ -1,0 +1,1 @@
+This branch is the review checkpoint for Workforce V2 Phase 6 employee UI. It contains only employee schedule/availability UI integration plus status documentation. No manager generation/review/publish flow or official schedule mutation is included.
