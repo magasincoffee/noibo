@@ -15,59 +15,62 @@ Integration branch: `workforce-v2-integration`.
 | P0 architecture | PASS | Workforce V2 architecture/rules are present in canonical chain. |
 | P1 database integrity | PASS | Integrity migration and indexes are present. |
 | P2 scheduler rules | PASS | Rulebook is present and is the contract for P3/P4. |
-| P3 deterministic scheduler | PASS | Cross-date `min_rest_hours` is enforced using a full date-time coordinate. Regression test added for Sunday-to-Monday rest. |
-| P4 independent validator | PASS WITH GAP | Validator independently checks hard constraints; runtime execution on the target environment is still required. |
-| P5 Supabase RPC | PASS | Controlled authenticated RPC boundary exists for availability, staffing demand and generation drafts. |
+| P3 deterministic scheduler | PASS | Cross-date `min_rest_hours` is enforced using a full date-time coordinate. Regression test exists for Sunday-to-Monday rest. |
+| P4 independent validator | PASS | Server-side validator was deployed and exercised in the production E2E transaction test. |
+| P5 Supabase RPC | PASS | Controlled authenticated RPC boundary exists for availability, staffing demand and generation drafts. Production compile/grant checks passed. |
 | P6 employee UI | PASS | Weekly schedule + availability surface exists. |
-| P7 manager UI | PASS | Staffing demand and generation review surface exists. |
-| P8 review/publish | PASS WITH REGRESSION GATE | Current validator uses explicit `c_exists` / `skill_exists`; SQL regression guard asserts it does not fall back to fragile `FOUND` checks. Runtime SQL verification remains required. |
-| P9 attendance | BLOCKED | Schedule-linked attendance migration/UI exists, but runtime Supabase/GitHub Pages verification is still required. |
+| P7 manager UI | PASS | Staffing demand and generation review surface exists. Production `list_schedule_generations()` check passed. |
+| P8 review/publish | PASS | Validation/review/publish RPCs compiled, permission checks passed, and full E2E review→publish transaction passed with rollback cleanup. |
+| P9 attendance | PASS WITH DEPLOYMENT GAP | Schedule-linked attendance migration/RPCs are deployed. Full E2E check-in→check-out passed inside a rollback/cleanup transaction. GitHub Pages browser smoke test remains pending. |
 
-## Confirmed structural chain
+## Production migrations applied
+
+The target Supabase project `MAGASIN-NOIBO` is healthy and now contains the runtime migrations corresponding to Workforce P5–P9. The connector records migration versions using application timestamps rather than the Git filename version numbers; this metadata drift is documented and must be reconciled before relying on CLI migration history as the sole source of truth.
+
+A corrective migration was also applied to add `schedule_generation_runs.updated_at`, because the existing `set_updated_at` trigger was attached to that table although the column was missing. This was discovered by the first E2E run and fixed before the successful rerun.
+
+## Runtime verification
+
+### Successful E2E transaction test
+
+Using an existing ACTIVE OWNER profile and temporary test rows inside a single database transaction, the following real production functions were exercised:
 
 ```text
-availability + skills + constraints + staffing demand
-        -> deterministic scheduler
-        -> generation draft
-        -> server-side validation
-        -> review
-        -> final revalidation
-        -> atomic publish
-        -> approved work_schedules
-        -> attendance.schedule_id
+create_schedule_generation
+-> replace_schedule_generation_assignments
+-> validate_schedule_generation_v1
+-> review_schedule_generation(APPROVED)
+-> publish_schedule_generation
+-> work_schedules row created as APPROVED / MANAGER_ASSIGNED
+-> get_my_today_schedules
+-> clock_in_for_schedule
+-> clock_out_attendance
+-> attendance row COMPLETED
 ```
 
-## Blocker resolution record
+All steps passed. The transaction then deleted all temporary rows. A post-test query confirmed zero remaining E2E store, attendance or generation rows.
 
-### 1. Scheduler cross-date rest mismatch — FIXED
+### Negative/security checks
 
-`scheduler/src/index.js` now converts `work_date + time` to an absolute minute coordinate before checking rest. This prevents a Monday assignment from being accepted after a Sunday assignment when the gap is below `min_rest_hours`.
+- Workforce RPCs are `EXECUTE` denied to `anon` and allowed to `authenticated`.
+- Direct `authenticated` INSERT/UPDATE to `work_schedules` and `attendance` is denied.
+- STAFF role cannot call manager generation discovery (`ROLE_NOT_ALLOWED`).
+- Invalid generation input is rejected server-side.
+- Unaudited/unauthenticated `clock_in_for_schedule` returns `AUTH_REQUIRED`.
 
-Regression coverage is present in `scheduler/test/scheduler.test.js`.
+## Security advisor notes
 
-### 2. Phase 8 PL/pgSQL `FOUND` regression risk — GUARDED
+Supabase Security Advisor still reports pre-existing/general `SECURITY DEFINER` exposure warnings on legacy helper functions (`can_access_store`, `current_user_role`, approval helpers, etc.) and a mutable search path warning on `set_updated_at`. These are not Workforce-specific runtime failures and are tracked separately for security hardening. The new Workforce RPCs themselves have no `anon` execute grant.
 
-The current P8 validator already uses explicit booleans (`c_exists`, `skill_exists`) for constraint/skill lookup state. A database regression test was added at `supabase/tests/workforce_v2_review_publish_regression.sql`.
+## Remaining merge gates
 
-The test checks the deployed routine definition for explicit state handling and cross-date rest logic, and documents behavioral fixtures for the target database.
+The following are still required before merging the integration branch into `main`:
 
-## Runtime verification status
-
-A local `git clone`/Node test attempt was blocked because the execution environment cannot resolve `github.com`. No GitHub Actions run is associated with the current integration commit. Therefore runtime verification is still pending and is **not** claimed as PASS.
-
-## Merge gate
-
-Do not merge `workforce-v2-integration` into `main` until all of the following are PASS:
-
-- Node scheduler regression suite passes;
-- SQL regression guard passes on the target Supabase database;
-- all Supabase migrations apply cleanly in the target project;
-- positive/negative RPC cases pass with real OWNER/STORE_MANAGER/employee roles;
-- review and publish transaction/rollback cases pass;
-- schedule-linked attendance check-in/out cases pass;
-- GitHub Pages employee and manager smoke tests pass;
-- full repository test/CI checks pass.
+- browser smoke test against the deployed GitHub Pages app for employee and manager flows;
+- full repository test/CI checks (no current GitHub Actions run was available for the integration commit);
+- reconcile Git migration filenames with Supabase migration history metadata;
+- review and separately remediate the legacy Security Advisor warnings where appropriate.
 
 ## Current decision
 
-`workforce-v2-integration` is the canonical P0–P9 integration branch. The two code-level blockers identified by the audit are resolved/guarded. The remaining blocker is runtime verification against the actual Supabase and deployed GitHub Pages environments.
+`workforce-v2-integration` is the canonical P0–P9 integration branch. The scheduler/validator blockers are resolved. Production Supabase runtime verification for the core P5–P9 path now passes, including an end-to-end review/publish/attendance transaction with cleanup. The integration is **not yet approved for merge to `main`** until the deployment/CI/security/documentation gates above are closed.
