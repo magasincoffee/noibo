@@ -20,6 +20,7 @@ Canonical source repository for the MAGASIN internal WebApp source and project-c
 - `frontend/` — canonical HTML/JS/CSS partials loaded by Apps Script
 - `web/` — standalone frontend experiment / preview for GitHub Pages
 - `docs/` — architecture, database and workflow documentation
+- `print-agent/` — local LAN print-agent prototype for HPRT TL31E validation
 
 ## Canonical Apps Script project manifest
 - `PROJECT_CONTROL/appsscript.json`
@@ -60,6 +61,16 @@ Reason: the chosen production architecture avoids the cross-origin iframe/fetch 
 - Session rehydration: current Sheet status/role/scope is refreshed on protected backend calls
 - Permission model: canonical page list + capability keys in `backend/07_Phân_quyền.gs`
 - Phase 2 test helper: `backend/19_Phase2_Auth_Session_Role_Test.gs`
+
+## Print integration — TL31E LAN prototype
+- `docs/architecture/TL31E_PROTOCOL_FINDINGS.md` records verified facts and limits of protocol discovery.
+- `docs/architecture/MAGASIN_PRINT_ARCHITECTURE.md` defines the proposed cloud-queue + local Print Agent topology.
+- `docs/architecture/PRINT_DATA_MODEL_REFERENCE.sql` is reference-only and is not a production migration.
+- `print-agent/` contains a local prototype with configurable raw-TCP transport, TSPL label generation, ESC/POS receipt generation, and a non-destructive TCP port probe.
+- TL31E Ethernet/LAN configuration and TSPL/ESC/POS capabilities are verified from supplied documentation and HPRT material.
+- Exact TL31E raw TCP port, discovery format and device-status protocol are **not yet proven**; `9100` in the example config is only a placeholder.
+- Do not expose the Print Agent publicly and do not place service-role secrets in the browser or repository.
+- No Supabase production print migration is included yet; hardware validation must happen first.
 
 ## Source synchronization
 ### Clean GitHub → Apps Script V2
