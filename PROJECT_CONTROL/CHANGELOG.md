@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## 2026-08-28 — WORKFORCE V2 PHASE 7 MANAGER / OWNER UI
+- Added `web/manager-workforce-ui.js` for manager/OWNER Workforce operations.
+- Added weekly staffing-demand view with store/week navigation.
+- Added staffing requirement create/update through `upsert_workforce_staffing_requirement`.
+- Added generation discovery through `list_schedule_generations`.
+- Added DRAFT generation creation through `create_schedule_generation`.
+- Added draft assignment review table through `get_schedule_generation_assignments`.
+- Added manager/OWNER Workforce navigation entry without replacing the existing HR/approval module.
+- Kept REVIEWED/PUBLISHED transitions and official `work_schedules` mutation out of Phase 7.
+
 ## 2026-08-28 — WORKFORCE V2 PHASE 6 EMPLOYEE UI
 - Added `web/workforce-ui.js` as the employee-facing Workforce V2 schedule surface.
 - Replaced the employee schedule view through a narrow additive UI layer without rewriting the existing application shell.
