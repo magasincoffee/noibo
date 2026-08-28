@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## 2026-08-28 — WORKFORCE V2 PHASE 0 ARCHITECTURE
+- Added `docs/architecture/MAGASIN_WORKFORCE_ARCHITECTURE_V2.md` as the canonical schedule/workforce contract.
+- Fixed V1 business timezone to `Asia/Ho_Chi_Minh` and scheduling week to Monday-Sunday.
+- Defined multiple date-specific availability windows per employee/day.
+- Defined precedence: `UNAVAILABLE` overrides overlapping `AVAILABLE`/`PREFERRED`; `PREFERRED` remains workable but scores as a preference.
+- Explicitly kept overnight shifts out of V1 because the existing time-range model requires `end_time > start_time`.
+- Defined hard constraints for availability, overlap, hours, rest, skills, store eligibility, mentor coverage and maximum staffing.
+- Defined deterministic scheduler objectives and stable tie-breaking; no random scheduler behavior.
+- Defined requirement coverage semantics over time intervals.
+- Defined generation lifecycle as `DRAFT → REVIEWED → PUBLISHED` with transactional revalidation at publish.
+- Defined official schedule as `work_schedules` and the generation layer as a separate draft/review layer.
+- Defined attendance linkage and shift-swap interaction boundaries.
+- Updated `PROJECT_CONTROL/STATUS.md` to record Phase 0 as documentation-only and identify the remaining implementation phases.
+- Rewrote `PROJECT_CONTROL/MAGASIN_DEPENDENCY_MAP.md` to remove obsolete Apps Script production-path instructions and align it with the Supabase-only runtime.
+
 ## 2026-08-27 — CLEAN GITHUB → APPS SCRIPT SYNC V2
 - Replaced the previous merge-style synchronization model with an exact canonical project replacement model.
 - Added `PROJECT_CONTROL/appsscript.json` as the canonical Apps Script manifest.
@@ -26,4 +41,4 @@
 - Added README and documentation folders.
 
 ## Working rule
-Use GitHub `main` as source of truth. Use feature branches for larger changes and review before merging. Do not remove the Apps Script fallback until production smoke tests are complete.
+Use GitHub `main` as source of truth. Use feature branches for larger changes and review before merging. Do not reintroduce Apps Script as a backend for new Workforce work.
