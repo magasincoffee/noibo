@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## 2026-08-28 — WORKFORCE V2 PHASE 5 SUPABASE RPC/API
+- Added controlled Supabase RPCs for employee availability self-service.
+- Added controlled Workforce staffing-demand read/write APIs with server-side store scope and data validation.
+- Added scheduler generation creation/read/cancel APIs for DRAFT generations.
+- Added atomic replacement of generation assignments with structural checks for generation week, store scope, active employees and employee overlap.
+- Added deterministic generation assignment read API with employee/store display metadata.
+- Explicitly kept REVIEWED/PUBLISHED transitions out of Phase 5 until final validation/revalidation and publish transaction are implemented.
+- Explicitly kept official `work_schedules` untouched by Phase 5 RPCs.
+- Revoked RPC execution from `anon`/`public`; authenticated callers are checked server-side.
+- Added `docs/architecture/MAGASIN_WORKFORCE_RPC_API_V1.md` as the frontend/API contract.
+
+## 2026-08-28 — WORKFORCE V2 PHASE 0-4 CLEAN CHECKPOINTS
+- Rebuilt Phase 0-4 branches from a clean `main` lineage after closing earlier noisy draft PRs.
+- Kept scheduler engine and validation package separated from Supabase mutation/publish paths.
+
 ## 2026-08-27 — CLEAN GITHUB → APPS SCRIPT SYNC V2
 - Replaced the previous merge-style synchronization model with an exact canonical project replacement model.
 - Added `PROJECT_CONTROL/appsscript.json` as the canonical Apps Script manifest.
@@ -26,4 +41,4 @@
 - Added README and documentation folders.
 
 ## Working rule
-Use GitHub `main` as source of truth. Use feature branches for larger changes and review before merging. Do not remove the Apps Script fallback until production smoke tests are complete.
+Use GitHub `main` as source of truth. Use feature branches for larger changes and review before merging. Do not reintroduce Apps Script as a backend for new Workforce work.
