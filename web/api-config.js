@@ -6,9 +6,8 @@
 */
 window.MAGASIN_API_URL = 'https://script.google.com/macros/s/AKfycbwRRoB2RtiYSqNcXYuQ9uZ0boWwmS4iiyB0Abb5-fYNV4dh1mIedW8-PT-jlhGI-Ufk/exec';
 
-/* Approval workflow loaders.
-   The scripts wait for Supabase + MAGASIN_API and then keep the PENDING
-   account decision authoritative even when legacy auth code rebinds API.call. */
+/* Account approval workflow.
+   These scripts load independently and wait for Supabase to be ready. */
 (function(){
   function load(src){
     var s=document.createElement('script');
@@ -18,6 +17,7 @@ window.MAGASIN_API_URL = 'https://script.google.com/macros/s/AKfycbwRRoB2RtiYSqN
     s.dataset.magasinApproval='1';
     document.head.appendChild(s);
   }
-  load('approval-ui-v2.js?v=20260828-approval2');
-  load('approval-api-guard.js?v=20260828-approval1');
+  load('approval-ui-v2.js?v=20260828-approval3');
+  load('approval-api-guard.js?v=20260828-approval2');
+  load('approval-boot.js?v=20260828-approval1');
 })();
