@@ -1,6 +1,6 @@
 # MAGASIN — SYSTEM STATUS
 
-Date: 2026-08-28
+Date: 2026-08-29
 
 ## Canonical stack
 
@@ -20,29 +20,49 @@ Google Apps Script, Google Sheets, Google Apps Script Web App, `google.script.ru
 Phase 0  Architecture contract              READY
 Phase 1  Data-model integrity               READY
 Phase 2  Scheduler domain rules             READY
-Phase 3  Deterministic scheduler engine     READY FOR VALIDATION/INTEGRATION
-Phase 4  Independent validation gate        READY FOR SUPABASE INTEGRATION
-Phase 5  Workforce Supabase RPC/API         READY FOR REVIEW
-Phase 6  Employee availability + schedule UI READY FOR REVIEW
-Phase 7  Manager/OWNER demand + draft UI    READY FOR REVIEW
+Phase 3  Deterministic scheduler engine     PASS
+Phase 4  Independent validation gate        PASS
+Phase 5  Workforce Supabase RPC/API         PASS — runtime verified
+Phase 6  Employee availability + schedule UI PASS
+Phase 7  Manager/OWNER demand + draft UI    PASS — runtime discovery verified
+Phase 8  Review/revalidation + atomic publish PASS — runtime E2E verified
+Phase 9  Schedule-linked attendance          PASS — runtime E2E verified
 ```
 
 The canonical Workforce V2 contract is documented in `docs/architecture/MAGASIN_WORKFORCE_ARCHITECTURE_V2.md`; scheduler rules are in `docs/architecture/MAGASIN_SCHEDULER_RULES_V1.md`.
 
-## Phase 7 boundary
+## Integration runtime verification
 
-The manager/OWNER Workforce surface adds controlled demand management and draft review. STORE_MANAGER is limited by server-side store scope; OWNER can work across stores. Staffing demand uses Workforce RPCs, generation discovery uses a dedicated read RPC, and draft assignments are read through the controlled generation API.
+Production Supabase project `MAGASIN-NOIBO` has been runtime-verified for the core Workforce P5–P9 path without leaving test data behind.
 
-Phase 7 deliberately does not transition generations to `REVIEWED` or `PUBLISHED`, does not mutate official `work_schedules`, and does not execute the Node scheduler inside the browser/database. Final validation/revalidation and atomic publication remain later work.
+Successful E2E transaction:
 
-## Remaining work
+```text
+create generation
+→ replace assignments
+→ validate generation
+→ review APPROVED
+→ publish
+→ APPROVED/MANAGER_ASSIGNED work_schedule
+→ today schedule lookup
+→ clock-in
+→ clock-out
+→ COMPLETED attendance
+→ cleanup
+```
 
-- Integrate the deterministic scheduler package with Supabase generation creation/assignment APIs.
-- Complete final validation/revalidation and REVIEWED/PUBLISHED workflow.
-- Complete attendance write workflow and official schedule linkage.
-- Complete shift-swap approval lifecycle.
-- Complete all other Supabase-backed business modules.
-- Add automated database tests and production smoke tests.
+A publish conflict/revalidation scenario was also verified: an official overlapping schedule introduced after review blocks publication and returns the generation to `DRAFT`.
+
+A real trigger/schema mismatch on `schedule_generation_runs.updated_at` was discovered during the first E2E attempt and corrected by additive migration `20260829000100_workforce_generation_updated_at_fix.sql`.
+
+## Remaining merge gates
+
+- Browser smoke test on deployed GitHub Pages employee/manager flows.
+- Full repository CI/test execution against the integration commit.
+- Reconcile Supabase migration metadata timestamps with Git migration filename/version conventions.
+- Review/remediate pre-existing Supabase Security Advisor warnings where appropriate.
+
+Do not merge `workforce-v2-integration` into `main` until all merge gates above are closed.
 
 ## Printer
 
