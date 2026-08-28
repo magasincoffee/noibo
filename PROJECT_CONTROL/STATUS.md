@@ -28,19 +28,45 @@ Core tables include `profiles`, `stores`, `employee_grades`, `approval_requests`
 
 ## Workforce V2
 
+The canonical Workforce V2 contract is documented in `docs/architecture/MAGASIN_WORKFORCE_ARCHITECTURE_V2.md`.
+
 ```text
 Employee availability
 + staffing demand
 + skills / constraints
         ↓
-Scheduler draft
+Deterministic scheduler
+        ↓
+DRAFT generation
         ↓
 Manager review
         ↓
-Publish official schedule
+Transactional validation + publish
+        ↓
+Official work_schedules
         ↓
 Attendance
 ```
+
+Phase 0 architecture decisions now fixed for V1:
+
+- Business timezone is `Asia/Ho_Chi_Minh`.
+- Scheduling week is Monday through Sunday.
+- Multiple availability windows per employee/day are allowed.
+- `UNAVAILABLE` overrides overlapping `AVAILABLE`/`PREFERRED` windows.
+- `PREFERRED` is workable availability plus a soft preference.
+- Availability is date-specific in V1; recurring templates are out of scope.
+- Overnight shifts are out of scope in V1 because the existing schema requires `end_time > start_time`.
+- Maximum daily/weekly hour limits and minimum rest are hard constraints when configured above zero.
+- Store eligibility uses `allowed_store_ids` when populated, otherwise falls back to profile `access_scope`.
+- Preferred store is a soft preference.
+- Skill requirements are satisfied only by active matching skills at or above the required level.
+- Mentor requirements are evaluated at the same store/time and by the same required skill.
+- Scheduler output is always DRAFT first; automatic publication is prohibited.
+- Publish must revalidate and commit the official schedule atomically.
+- Deterministic tie-breaking is required; no random scheduler behavior.
+
+Phase 0 changes are documentation-only and do not change runtime business logic.
 
 ## Printer
 
@@ -48,12 +74,18 @@ Attendance
 
 ## Remaining work
 
-- Complete all Supabase-backed business modules.
-- Complete Workforce V2 UI and deterministic scheduler engine.
-- Complete attendance write workflow and schedule linkage.
+- Implement Workforce V2 domain validation and deterministic scheduler engine.
+- Implement Workforce generation/review/publish RPC lifecycle.
+- Complete Workforce V2 employee and manager/OWNER UI.
+- Complete attendance write workflow and official schedule linkage.
 - Complete shift-swap approval lifecycle.
+- Complete all other Supabase-backed business modules.
 - Design inventory/order schema before implementation.
 - Add automated tests and production smoke tests.
+
+## Documentation consistency
+
+`PROJECT_CONTROL/MAGASIN_DEPENDENCY_MAP.md` contained legacy Apps Script production-path descriptions. Phase 0 marks those descriptions as superseded; the canonical runtime is the Supabase-only architecture described by the README and current code.
 
 ## Database reset
 
