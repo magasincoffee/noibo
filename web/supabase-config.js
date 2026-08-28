@@ -2,7 +2,7 @@
  * Only the public publishable key is stored here.
  * Never put service_role keys, database passwords or secrets in the frontend.
  */
-(function(window){
+(function(window, document){
   'use strict';
   const CONFIG=Object.freeze({
     url:'https://menvbzlsncmpuvnaifxa.supabase.co',
@@ -13,16 +13,16 @@
   }
   window.MAGASIN_SUPABASE_CONFIG=CONFIG;
   window.MAGASIN_SUPABASE=window.supabase.createClient(CONFIG.url,CONFIG.publishableKey,{auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:true}});
-
-  // Load the employee Workforce V2 surface after the application shell is ready.
   function loadWorkforceUi(){
-    if(document.getElementById('magasin-workforce-ui')) return;
-    const script=document.createElement('script');
-    script.id='magasin-workforce-ui';
-    script.src='workforce-ui.js';
-    script.async=false;
-    document.head.appendChild(script);
+    ['workforce-ui.js','attendance-workforce-ui.js','manager-workforce-ui.js'].forEach((src)=>{
+      if(document.querySelector('script[data-magasin-module="'+src+'"]'))return;
+      const script=document.createElement('script');
+      script.src=src+'?v=20260828-workforce-v2';
+      script.async=false;
+      script.dataset.magasinModule=src;
+      document.head.appendChild(script);
+    });
   }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',loadWorkforceUi,{once:true});
-  else loadWorkforceUi();
-})(window);
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',loadWorkforceUi,{once:true});
+  else setTimeout(loadWorkforceUi,0);
+})(window, document);
