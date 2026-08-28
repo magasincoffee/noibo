@@ -15,12 +15,12 @@ Integration branch: `workforce-v2-integration`.
 | P0 architecture | PASS | Workforce V2 architecture/rules are present in canonical chain. |
 | P1 database integrity | PASS | Integrity migration and indexes are present. |
 | P2 scheduler rules | PASS | Rulebook is present and is the contract for P3/P4. |
-| P3 deterministic scheduler | PASS | Cross-date `min_rest_hours` is now enforced using a full date-time coordinate. Regression test added for Sunday-to-Monday rest. |
+| P3 deterministic scheduler | PASS | Cross-date `min_rest_hours` is enforced using a full date-time coordinate. Regression test added for Sunday-to-Monday rest. |
 | P4 independent validator | PASS WITH GAP | Validator independently checks hard constraints; runtime execution on the target environment is still required. |
 | P5 Supabase RPC | PASS | Controlled authenticated RPC boundary exists for availability, staffing demand and generation drafts. |
 | P6 employee UI | PASS | Weekly schedule + availability surface exists. |
 | P7 manager UI | PASS | Staffing demand and generation review surface exists. |
-| P8 review/publish | PASS WITH REGRESSION GATE | Current validator already uses explicit `c_exists` / `skill_exists`; SQL regression guard now asserts the implementation does not fall back to fragile `FOUND` checks. Runtime SQL verification remains required. |
+| P8 review/publish | PASS WITH REGRESSION GATE | Current validator uses explicit `c_exists` / `skill_exists`; SQL regression guard asserts it does not fall back to fragile `FOUND` checks. Runtime SQL verification remains required. |
 | P9 attendance | BLOCKED | Schedule-linked attendance migration/UI exists, but runtime Supabase/GitHub Pages verification is still required. |
 
 ## Confirmed structural chain
@@ -47,13 +47,13 @@ Regression coverage is present in `scheduler/test/scheduler.test.js`.
 
 ### 2. Phase 8 PL/pgSQL `FOUND` regression risk — GUARDED
 
-The current P8 validator uses explicit booleans (`c_exists`, `skill_exists`) for the constraint/skill lookup state. A database regression test was added at `supabase/tests/workforce_v2_review_publish_regression.sql`.
+The current P8 validator already uses explicit booleans (`c_exists`, `skill_exists`) for constraint/skill lookup state. A database regression test was added at `supabase/tests/workforce_v2_review_publish_regression.sql`.
 
-The test checks the deployed routine definition for explicit state handling and cross-date rest logic, and documents behavioral fixtures that must be exercised on the target database.
+The test checks the deployed routine definition for explicit state handling and cross-date rest logic, and documents behavioral fixtures for the target database.
 
 ## Runtime verification status
 
-Source and structural audit is complete, but the repository-only session cannot execute the target Supabase project or the deployed GitHub Pages app. Therefore runtime verification remains pending.
+A local `git clone`/Node test attempt was blocked because the execution environment cannot resolve `github.com`. No GitHub Actions run is associated with the current integration commit. Therefore runtime verification is still pending and is **not** claimed as PASS.
 
 ## Merge gate
 
@@ -70,4 +70,4 @@ Do not merge `workforce-v2-integration` into `main` until all of the following a
 
 ## Current decision
 
-`workforce-v2-integration` remains the canonical P0–P9 integration branch. Code-level blockers identified during audit are resolved/guarded. The remaining blocker is runtime verification against the actual Supabase and deployed GitHub Pages environments.
+`workforce-v2-integration` is the canonical P0–P9 integration branch. The two code-level blockers identified by the audit are resolved/guarded. The remaining blocker is runtime verification against the actual Supabase and deployed GitHub Pages environments.
