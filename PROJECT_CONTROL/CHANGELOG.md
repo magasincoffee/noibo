@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## 2026-08-28 — WORKFORCE V2 PHASE 2 SCHEDULER DOMAIN RULES
+- Added `docs/architecture/MAGASIN_SCHEDULER_RULES_V1.md` as the normative scheduler domain rulebook.
+- Defined HARD, SOFT and DERIVED rule classes.
+- Defined deterministic candidate ordering and coverage semantics.
+- Defined availability, skill, mentor, store and hour constraints.
+- Defined review/publish boundaries and machine-readable hard-block explanations.
+- No scheduler engine, publish workflow, UI behavior or production data was changed.
+
 ## 2026-08-28 — WORKFORCE V2 PHASE 1 DATA MODEL
 - Added `supabase/migrations/20260828001200_workforce_data_integrity_v1.sql` as an additive data-integrity hardening migration.
 - Enforced Monday-Sunday generation boundaries with `week_end = week_start + 6`.
