@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## 2026-08-28 — WORKFORCE V2 PHASE 1 DATA MODEL
+- Added `supabase/migrations/20260828001200_workforce_data_integrity_v1.sql` as an additive data-integrity hardening migration.
+- Enforced Monday-Sunday generation boundaries with `week_end = week_start + 6`.
+- Prevented generic staffing requirements from carrying a non-zero skill level without a skill code.
+- Added `updated_at` maintenance for scheduler generation runs.
+- Added scheduler-oriented indexes for availability, active skills, constraints, staffing requirements and generation assignments.
+- Added explicit column comments documenting V1 Workforce semantics.
+- No scheduler algorithm, review/publish workflow, UI behavior or production data was changed.
+
 ## 2026-08-27 — CLEAN GITHUB → APPS SCRIPT SYNC V2
 - Replaced the previous merge-style synchronization model with an exact canonical project replacement model.
 - Added `PROJECT_CONTROL/appsscript.json` as the canonical Apps Script manifest.
