@@ -1,25 +1,13 @@
-# MAGASIN Workforce V2 — Attendance integration V1
+# Workforce V2 Phase 9 — Attendance integration
 
-## Canonical relationship
-`work_schedules` is the authoritative planned-work record. `attendance.schedule_id` directly references the schedule used for the attendance record.
+`work_schedules` is the authoritative planned-work record. `attendance.schedule_id` directly references the schedule used for actual attendance.
 
-## Employee flow
-APPROVED schedule → employee selects shift → `clock_in_for_schedule()` → OPEN attendance → `clock_out_attendance()` → COMPLETED attendance.
+Employee flow: APPROVED schedule → check-in → OPEN attendance → check-out → COMPLETED attendance.
 
-## Snapshot semantics
-At check-in, `planned_start`, `planned_end`, `grade`, and `hourly_rate` are snapshotted. Check-out calculates `late_minutes`, `early_minutes`, `hours_worked`, and `amount`.
+Check-in snapshots `planned_start`, `planned_end`, active grade and hourly rate. Check-out calculates late/early minutes, worked hours and amount.
 
-## Guards
-- Only the authenticated employee's own APPROVED schedule can be checked in.
-- Business date uses `Asia/Ho_Chi_Minh`.
-- One active attendance per schedule and one OPEN attendance per employee.
-- No direct browser write to `work_schedules`.
-- Manager correction, overtime/labor-law rules, payroll export and shift-swap mutation remain out of scope.
+Guards: authenticated employee only, APPROVED schedule only, Vietnam business date, one OPEN attendance per employee, one active attendance per schedule, no direct browser write to `work_schedules`.
 
-## Runtime verification required
-- Apply migration to target Supabase.
-- Verify positive check-in/check-out.
-- Verify duplicate schedule attendance is blocked.
-- Verify concurrent/open attendance is blocked.
-- Verify late/early/hours/amount calculations.
-- Verify employee cannot use another employee's schedule or non-APPROVED schedule.
+Out of scope: manager correction, overtime/labor-law rules, payroll export, shift-swap mutation.
+
+Runtime verification is required on the target Supabase project and deployed GitHub Pages site before merge.
