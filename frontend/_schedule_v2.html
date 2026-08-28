@@ -1,0 +1,135 @@
+/* =========================================================
+   MAGASIN — LỊCH NHÂN SỰ V2 UI
+   Pure JavaScript partial. Loaded after canonical _schedule.html.
+   Does not auto-publish schedules.
+========================================================= */
+(function(window, document){
+  'use strict';
+
+  function esc(v){
+    return String(v == null ? '' : v).replace(/[&<>\"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[m];});
+  }
+  function run(name){
+    return google.script.run.withSuccessHandler(arguments[1] || function(){}).withFailureHandler(arguments[2] || function(){});
+  }
+  function fmtDate(d){return new Intl.DateTimeFormat('vi-VN',{weekday:'short',day:'2-digit',month:'2-digit'}).format(d).replace(',', '');}
+  function key(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+  function monday(offset){var d=new Date();d.setHours(12,0,0,0);var day=d.getDay();d.setDate(d.getDate()-(day===0?6:day-1)+(offset||0)*7);return d;}
+  function nextWeek(){return monday(1);}
+  function timeOptions(){var out='<option value="">Chọn giờ</option>';for(var h=0;h<24;h++){for(var m of [0,30]){var v=String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');out+='<option value="'+v+'">'+v+'</option>';}}return out;}
+  function presetRange(type){
+    if(type==='full') return ['06:00','14:00'];
+    if(type==='morning') return ['06:00','12:00'];
+    if(type==='afternoon') return ['12:00','17:00'];
+    if(type==='evening') return ['17:00','22:00'];
+    return ['',''];
+  }
+  function getStores(selectId){
+    var select=document.getElementById(selectId); if(!select)return;
+    google.script.run.withSuccessHandler(function(r){
+      var stores=(r&&r.ok&&Array.isArray(r.stores))?r.stores:[];
+      select.innerHTML='<option value="">Chọn cửa hàng</option>'+stores.map(function(s){return '<option value="'+esc(s)+'">'+esc(s)+'</option>';}).join('');
+      if(stores.length===1)select.value=stores[0];
+    }).withFailureHandler(function(){select.innerHTML='<option value="">Không tải được</option>';}).getScheduleV2StoreOptions(currentSessionToken);
+  }
+
+  function installStyles(){
+    if(document.getElementById('magasinScheduleV2Styles'))return;
+    var s=document.createElement('style');s.id='magasinScheduleV2Styles';
+    s.textContent=''+
+      '.sv2-card{background:#fff;border:1px solid #e5ebf0;border-radius:18px;padding:18px;margin-bottom:16px;box-shadow:0 6px 24px rgba(31,58,86,.05)}'+
+      '.sv2-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}.sv2-head h3{margin:0 0 6px;color:#17324d}.sv2-head p{margin:0;color:#738398;font-size:13px;line-height:1.55}.sv2-badge{border-radius:999px;padding:6px 10px;font-size:11px;font-weight:800;background:#eef7f7;color:#087f86;white-space:nowrap}'+
+      '.sv2-week{margin:14px 0 0;display:grid;grid-template-columns:repeat(7,minmax(120px,1fr));gap:10px}.sv2-day{border:1px solid #e5ebf0;border-radius:14px;padding:12px;background:#fbfcfd;min-height:130px}.sv2-day.today{border-color:#15aeb6;box-shadow:0 0 0 2px rgba(21,174,182,.08)}.sv2-day-head{display:flex;justify-content:space-between;gap:8px;margin-bottom:10px}.sv2-day-head strong{font-size:12px;color:#1e3c57}.sv2-day-head span{font-size:11px;color:#8a99aa}.sv2-shift{padding:10px;border-radius:11px;margin-bottom:8px;color:#16324f;background:#eef8f8;border-left:4px solid #16b9bf}.sv2-shift span{display:block;font-size:11px;color:#6e8195;margin-top:2px}.sv2-empty{font-size:12px;color:#9aa8b7;padding:12px 2px}.sv2-toggle{width:100%;display:flex;justify-content:space-between;align-items:center;background:transparent;border:0;padding:0;text-align:left;cursor:pointer}.sv2-toggle .arrow{font-size:20px;color:#738398}.sv2-body{display:none;margin-top:16px}.sv2-body.open{display:block}.sv2-toolbar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}.sv2-toolbar button{border:1px solid #dce5ec;background:#fff;border-radius:10px;padding:8px 11px;color:#30506d;font-weight:700;cursor:pointer}.sv2-toolbar button.active{background:#eaf9fa;border-color:#9cdddf;color:#057b83}.sv2-form{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.sv2-form label{font-size:11px;color:#718196}.sv2-form select,.sv2-form input{display:block;width:100%;margin-top:5px;height:42px;border:1px solid #dce5ec;border-radius:10px;padding:0 10px;background:#fff;color:#243f59}.sv2-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:12px}.sv2-primary{border:0;background:#14aeb7;color:#fff;border-radius:10px;padding:11px 16px;font-weight:800;cursor:pointer}.sv2-secondary{border:1px solid #dce5ec;background:#fff;color:#30506d;border-radius:10px;padding:11px 16px;font-weight:800;cursor:pointer}.sv2-status{margin-top:10px;font-size:12px}.sv2-status.ok{color:#087e61}.sv2-status.err{color:#b42318}.sv2-availability-grid{display:grid;gap:10px}.sv2-availability-day{border:1px solid #e5ebf0;border-radius:14px;padding:12px}.sv2-availability-day h4{margin:0 0 10px;font-size:13px;color:#17324d}.sv2-avail-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px;border-radius:10px;background:#f8fafc;margin-bottom:7px}.sv2-avail-item strong{font-size:13px;color:#23435f}.sv2-avail-item span{font-size:11px;color:#7b8c9e}.sv2-delete{border:0;background:transparent;color:#a84848;cursor:pointer;font-size:12px}.sv2-manager-toolbar{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:end}.sv2-manager-toolbar label{font-size:11px;color:#718196}.sv2-manager-toolbar select,.sv2-manager-toolbar input{width:100%;height:42px;border:1px solid #dce5ec;border-radius:10px;padding:0 10px;margin-top:5px}.sv2-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:14px 0}.sv2-kpi{border:1px solid #e5ebf0;border-radius:12px;padding:12px;background:#fbfcfd}.sv2-kpi span{display:block;font-size:10px;color:#7a8b9d}.sv2-kpi strong{display:block;margin-top:4px;font-size:18px;color:#193752}.sv2-board{overflow:auto}.sv2-row{display:grid;grid-template-columns:150px repeat(7,minmax(145px,1fr));min-width:1180px}.sv2-row>div{border-right:1px solid #e8edf1;border-bottom:1px solid #e8edf1;padding:9px}.sv2-row.head{font-weight:800;background:#f7fafc;color:#31506b;font-size:11px}.sv2-staff{font-weight:800;color:#23435f;background:#fbfcfd}.sv2-person{display:block;padding:7px 8px;border-radius:9px;background:#eef8f8;margin-bottom:6px;font-size:11px}.sv2-person em{display:block;color:#6d8195;font-style:normal;font-size:10px;margin-top:2px}.sv2-coverage{font-size:10px;color:#6e8195;margin-top:5px}.sv2-coverage.ok{color:#087e61}.sv2-coverage.warn{color:#b56a00}.sv2-coverage.bad{color:#b42318}.sv2-requirements{display:grid;gap:8px}.sv2-req{display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr 1fr;gap:8px;align-items:center;border:1px solid #e5ebf0;border-radius:12px;padding:10px;background:#fbfcfd}.sv2-req span{font-size:11px;color:#718196}.sv2-req strong{font-size:12px;color:#23435f}.sv2-note{font-size:11px;color:#7a8b9d;line-height:1.5;margin-top:8px}@media(max-width:900px){.sv2-week{grid-template-columns:repeat(7,minmax(190px,1fr));overflow:auto;padding-bottom:4px}.sv2-form{grid-template-columns:1fr 1fr}.sv2-manager-toolbar{grid-template-columns:1fr 1fr}.sv2-kpis{grid-template-columns:1fr 1fr}}@media(max-width:600px){.sv2-form{grid-template-columns:1fr}.sv2-manager-toolbar{grid-template-columns:1fr}.sv2-kpis{grid-template-columns:1fr 1fr}.sv2-day{min-height:120px}.sv2-head{display:block}.sv2-badge{display:inline-block;margin-top:10px}.sv2-req{grid-template-columns:1fr 1fr}}';
+    document.head.appendChild(s);
+  }
+
+  function renderOfficialWeek(container, items){
+    var start=monday(0), today=key(new Date());
+    var by={};(items||[]).filter(function(x){return String(x.status||'').toUpperCase()==='APPROVED';}).forEach(function(x){var k=String(x.date||'').slice(0,10);(by[k]||(by[k]=[])).push(x);});
+    var names=['Thứ Hai','Thứ Ba','Thứ Tư','Thứ Năm','Thứ Sáu','Thứ Bảy','Chủ Nhật'];
+    container.innerHTML=names.map(function(n,i){var d=new Date(start);d.setDate(start.getDate()+i);var k=key(d);var a=(by[k]||[]).sort(function(x,y){return String(x.start).localeCompare(String(y.start));});return '<div class="sv2-day '+(k===today?'today':'')+'"><div class="sv2-day-head"><strong>'+n+'</strong><span>'+fmtDate(d)+'</span></div>'+(a.length?a.map(function(x){return '<div class="sv2-shift"><strong>'+esc(x.start)+' – '+esc(x.end)+'</strong><span>'+esc(x.store||'')+'</span></div>';}).join(''):'<div class="sv2-empty">Chưa có lịch</div>')+'</div>';}).join('');
+  }
+
+  function renderAvailabilityWeek(container, items){
+    var start=nextWeek(), names=['Thứ Hai','Thứ Ba','Thứ Tư','Thứ Năm','Thứ Sáu','Thứ Bảy','Chủ Nhật'];
+    var by={};(items||[]).forEach(function(x){var k=String(x.date||'').slice(0,10);(by[k]||(by[k]=[])).push(x);});
+    container.innerHTML=names.map(function(n,i){var d=new Date(start);d.setDate(start.getDate()+i);var a=by[key(d)]||[];return '<div class="sv2-availability-day"><h4>'+n+' · '+fmtDate(d).split(' ')[1]+'</h4>'+(a.length?a.map(function(x){return '<div class="sv2-avail-item"><div><strong>'+esc(x.start)+' – '+esc(x.end)+'</strong><span>'+esc(x.store)+'</span></div><button class="sv2-delete" type="button" data-delete-avail="'+esc(x.id)+'">Hủy</button></div>';}).join(''):'<div class="sv2-empty">Chưa đăng ký thời gian</div>')+'</div>';}).join('');
+    container.querySelectorAll('[data-delete-avail]').forEach(function(btn){btn.onclick=function(){google.script.run.withSuccessHandler(function(r){loadEmployeeV2();}).cancelMyAvailability(currentSessionToken,btn.dataset.deleteAvail);};});
+  }
+
+  function loadEmployeeV2(){
+    var official=document.getElementById('sv2OfficialWeek'), avail=document.getElementById('sv2AvailabilityWeek'), msg=document.getElementById('sv2AvailabilityMsg');
+    google.script.run.withSuccessHandler(function(r){if(r&&r.ok){renderOfficialWeek(official,r.items);}}).getMySchedule(currentSessionToken);
+    google.script.run.withSuccessHandler(function(r){if(r&&r.ok){renderAvailabilityWeek(avail,r.items);}}).getMyAvailability(currentSessionToken,{offsetWeeks:1});
+    if(msg)msg.textContent='';
+  }
+
+  function applyPreset(startId,endId,type){var r=presetRange(type);var a=document.getElementById(startId),b=document.getElementById(endId);if(a)a.value=r[0];if(b)b.value=r[1];}
+
+  function renderEmployeeScheduleV2(){
+    installStyles();
+    if(typeof resetPageLayout_==='function')resetPageLayout_();
+    var box=document.getElementById('pageContent');if(!box)return;
+    var w=nextWeek(), label=new Intl.DateTimeFormat('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric'});
+    box.innerHTML='<div class="sv2-card"><div class="sv2-head"><div><h3>Lịch làm việc của tôi</h3><p>Tuần hiện tại · chỉ hiển thị lịch đã được duyệt hoặc quản lý xếp.</p></div><span class="sv2-badge">LỊCH CHÍNH THỨC</span></div><div id="sv2OfficialWeek" class="sv2-week"><div class="sv2-empty">Đang tải…</div></div></div>'+\
+      '<div class="sv2-card"><button class="sv2-toggle" id="sv2Toggle"><div><h3 style="margin:0;color:#17324d">📝 Đăng ký thời gian có thể làm tuần tới</h3><p style="margin:4px 0 0;color:#738398;font-size:12px">Bạn đăng ký khoảng thời gian có thể làm; quản lý sẽ xếp lịch chính thức.</p></div><span class="arrow">⌄</span></button><div id="sv2Body" class="sv2-body"><div class="sv2-toolbar"><button type="button" data-preset="full">Cả ngày · 06:00–14:00</button><button type="button" data-preset="morning">Sáng · 06:00–12:00</button><button type="button" data-preset="afternoon">Chiều · 12:00–17:00</button><button type="button" data-preset="evening">Tối · 17:00–22:00</button><button type="button" data-preset="custom">Tùy chỉnh</button></div><div class="sv2-form"><label>Ngày<input id="sv2Date" type="date" min="'+key(w)+'" max="'+key(new Date(w.getTime()+6*86400000))+'" value="'+key(w)+'"></label><label>Giờ bắt đầu<select id="sv2Start">'+timeOptions()+'</select></label><label>Giờ kết thúc<select id="sv2End">'+timeOptions()+'</select></label><label>Cửa hàng<select id="sv2Store"><option>Đang tải…</option></select></label></div><div class="sv2-actions"><button class="sv2-primary" id="sv2Save" type="button">Đăng ký thời gian</button></div><div id="sv2AvailabilityMsg" class="sv2-status"></div><div id="sv2AvailabilityWeek" class="sv2-availability-grid" style="margin-top:14px"></div></div></div>';
+    document.getElementById('sv2Toggle').onclick=function(){document.getElementById('sv2Body').classList.toggle('open');this.querySelector('.arrow').textContent=document.getElementById('sv2Body').classList.contains('open')?'⌃':'⌄';};
+    document.querySelectorAll('[data-preset]').forEach(function(b){b.onclick=function(){applyPreset('sv2Start','sv2End',b.dataset.preset);};});
+    getStores('sv2Store');
+    document.getElementById('sv2Save').onclick=function(){var msg=document.getElementById('sv2AvailabilityMsg'), data={date:document.getElementById('sv2Date').value,start:document.getElementById('sv2Start').value,end:document.getElementById('sv2End').value,store:document.getElementById('sv2Store').value};if(!data.date||!data.start||!data.end||!data.store){msg.className='sv2-status err';msg.textContent='Vui lòng chọn đầy đủ thông tin.';return;}this.disabled=true;google.script.run.withSuccessHandler(function(r){document.getElementById('sv2Save').disabled=false;msg.className='sv2-status '+(r&&r.ok?'ok':'err');msg.textContent=r&&r.message||'Không thể lưu.';if(r&&r.ok){document.getElementById('sv2Start').value='';document.getElementById('sv2End').value='';loadEmployeeV2();}}).withFailureHandler(function(e){document.getElementById('sv2Save').disabled=false;msg.className='sv2-status err';msg.textContent=String(e&&e.message||'Lỗi kết nối.');}).saveMyAvailability(currentSessionToken,data);};
+    loadEmployeeV2();
+  }
+
+  function renderManagerScheduleV2(){
+    installStyles();
+    if(typeof resetPageLayout_==='function')resetPageLayout_();
+    var box=document.getElementById('pageContent');if(!box)return;
+    var w=monday(0), end=new Date(w);end.setDate(end.getDate()+6);
+    box.innerHTML='<div class="sv2-card"><div class="sv2-head"><div><h3>Lịch nhân sự · Quản lý</h3><p>Xem coverage, thời gian có thể làm và tạo lịch nháp. Lịch chỉ được áp dụng sau khi quản lý kiểm tra.</p></div><span class="sv2-badge">MANAGER</span></div><div class="sv2-manager-toolbar" style="margin-top:14px"><label>Cửa hàng<select id="sv2ManagerStore"><option>Đang tải…</option></select></label><label>Từ ngày<input id="sv2ManagerStart" type="date" value="'+key(w)+'"></label><label>Đến ngày<input id="sv2ManagerEnd" type="date" value="'+key(end)+'"></label><button class="sv2-primary" id="sv2LoadManager" type="button">Xem lịch</button></div><div class="sv2-kpis"><div class="sv2-kpi"><span>Coverage</span><strong id="sv2Coverage">—</strong></div><div class="sv2-kpi"><span>Đăng ký khả dụng</span><strong id="sv2AvailCount">—</strong></div><div class="sv2-kpi"><span>Nhu cầu</span><strong id="sv2ReqCount">—</strong></div><div class="sv2-kpi"><span>Draft</span><strong id="sv2DraftCount">—</strong></div></div><div id="sv2ManagerBoard" class="sv2-board"><div class="sv2-empty">Chọn cửa hàng và bấm Xem lịch.</div></div><div class="sv2-actions"><button class="sv2-secondary" id="sv2AutoSchedule" type="button">✨ Tạo lịch tự động</button></div><div id="sv2ManagerMsg" class="sv2-status"></div></div>';
+    getStores('sv2ManagerStore');
+    document.getElementById('sv2LoadManager').onclick=loadManagerBoard;
+    document.getElementById('sv2AutoSchedule').onclick=generateManagerDraft;
+  }
+
+  function loadManagerBoard(){
+    var store=document.getElementById('sv2ManagerStore').value,start=document.getElementById('sv2ManagerStart').value,end=document.getElementById('sv2ManagerEnd').value,board=document.getElementById('sv2ManagerBoard');
+    if(!store){board.innerHTML='<div class="sv2-empty">Vui lòng chọn cửa hàng.</div>';return;}
+    board.innerHTML='<div class="sv2-empty">Đang tải…</div>';
+    google.script.run.withSuccessHandler(function(r){
+      if(!r||!r.ok){board.innerHTML='<div class="sv2-empty">'+esc(r&&r.message||'Không tải được lịch.')+'</div>';return;}
+      var days=['Thứ Hai','Thứ Ba','Thứ Tư','Thứ Năm','Thứ Sáu','Thứ Bảy','Chủ Nhật'], s0=new Date(start+'T12:00:00');
+      var sched=r.schedules||[], avail=r.availability||[], req=r.requirements||[];
+      var byDate={};sched.forEach(function(x){(byDate[x.date]||(byDate[x.date]=[])).push(x);});
+      var reqBy={};req.forEach(function(x){(reqBy[x.date]||(reqBy[x.date]=[])).push(x);});
+      var html='<div class="sv2-row head"><div>Nhân viên / Ngày</div>'+days.map(function(d){return '<div>'+d+'</div>';}).join('')+'</div>';
+      var names={};sched.forEach(function(x){names[x.username]=1;});avail.forEach(function(x){names[x.username]=1;});
+      Object.keys(names).sort().forEach(function(username){var emp=avail.find(function(a){return a.username===username;});html+='<div class="sv2-row"><div class="sv2-staff">'+esc(emp&&emp.fullName||username)+'</div>'+days.map(function(_,i){var d=new Date(s0);d.setDate(s0.getDate()+i);var k=key(d), sh=(byDate[k]||[]).filter(function(x){return x.username===username;}), av=(emp&&emp.windows||[]).filter(function(x){return x.date===k;});return '<div>'+(sh.length?sh.map(function(x){return '<span class="sv2-person">'+esc(x.start)+'–'+esc(x.end)+'<em>'+esc(x.status||'')+'</em></span>';}).join(''):'')+(av.length?'<div class="sv2-coverage">Có thể: '+av.map(function(x){return esc(x.start)+'–'+esc(x.end);}).join(', ')+'</div>':'<div class="sv2-empty">—</div>')+'</div>';}).join('')+'</div>';});
+      board.innerHTML=html||'<div class="sv2-empty">Chưa có dữ liệu nhân sự.</div>';
+      document.getElementById('sv2AvailCount').textContent=avail.reduce(function(n,x){return n+(x.windows||[]).length;},0);
+      document.getElementById('sv2ReqCount').textContent=req.length;
+      var reqTotal=req.reduce(function(n,x){return n+Number(x.target||x.minimum||0);},0), schedTotal=sched.filter(function(x){return x.status==='APPROVED';}).length;document.getElementById('sv2Coverage').textContent=reqTotal?Math.min(100,Math.round(schedTotal/reqTotal*100))+'%':'—';
+      document.getElementById('sv2DraftCount').textContent='—';
+    }).withFailureHandler(function(e){board.innerHTML='<div class="sv2-empty">'+esc(e&&e.message||'Lỗi kết nối.')+'</div>';}).getScheduleV2Board(currentSessionToken,{store:store,startDate:start,endDate:end});
+  }
+
+  function generateManagerDraft(){
+    var store=document.getElementById('sv2ManagerStore').value,start=document.getElementById('sv2ManagerStart').value,end=document.getElementById('sv2ManagerEnd').value,msg=document.getElementById('sv2ManagerMsg');
+    if(!store){msg.className='sv2-status err';msg.textContent='Vui lòng chọn cửa hàng.';return;}
+    msg.className='sv2-status';msg.textContent='Đang tạo lịch nháp…';
+    google.script.run.withSuccessHandler(function(r){if(!r||!r.ok){msg.className='sv2-status err';msg.textContent=r&&r.message||'Không thể tạo draft.';return;}msg.className='sv2-status ok';msg.textContent='Đã tạo draft: '+r.assignments.length+' phân công · '+r.warnings.length+' cảnh báo. Hãy kiểm tra trước khi publish.';document.getElementById('sv2DraftCount').textContent=r.assignments.length;loadManagerBoard();}).withFailureHandler(function(e){msg.className='sv2-status err';msg.textContent=String(e&&e.message||'Lỗi kết nối.');}).generateScheduleDraft(currentSessionToken,{store:store,startDate:start,endDate:end});
+  }
+
+  function installManagerMenu(){
+    var menus=[document.getElementById('appMenu'),document.getElementById('drawerMenu')].filter(Boolean);
+    menus.forEach(function(menu){if(menu.dataset.sv2Bound==='1')return;menu.dataset.sv2Bound='1';var observer=new MutationObserver(function(){if(menu.querySelector('[data-sv2-schedule]'))return;var role=document.getElementById('userRole');var text=role&&role.textContent||'';if(text!=='Chủ hệ thống'&&text!=='Quản lý cửa hàng')return;var b=document.createElement('button');b.type='button';b.className=menu.classList.contains('menu')?'menu-item manager-only-menu':'drawer-btn';b.dataset.sv2Schedule='1';b.innerHTML='<span class="menu-icon">📅</span><span class="menu-text">Lịch nhân sự</span>';if(menu.classList.contains('drawer-menu'))b.innerHTML='<span>📅</span><span>Lịch nhân sự</span>';b.onclick=function(){renderManagerScheduleV2_();};menu.appendChild(b);});observer.observe(menu,{childList:true,subtree:true});});
+  }
+
+  window.renderEmployeeScheduleV2_=renderEmployeeScheduleV2;
+  window.renderManagerScheduleV2_=renderManagerScheduleV2;
+  window.renderScheduleV2_=function(){
+    var roleText=(document.getElementById('userRole')||{}).textContent||'';
+    if(roleText==='Chủ hệ thống'||roleText==='Quản lý cửa hàng')renderManagerScheduleV2_();else renderEmployeeScheduleV2_();
+  };
+
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',installManagerMenu);else installManagerMenu();
+})(window,document);
