@@ -18,6 +18,8 @@ const time = m => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 6
 const overlap = (a, b, c, d) => a < d && c < b;
 const contain = (a, b, c, d) => a <= c && d <= b;
 const hours = (a, b) => (b - a) / 60;
+function dayKey(v) { const [y, m, d] = date(v).split('-').map(Number); return Date.UTC(y, m - 1, d) / 60000; }
+function absoluteMinutes(workDate, timeMinutes) { return dayKey(workDate) + timeMinutes; }
 function plusDays(v, n) { const d = new Date(`${v}T12:00:00+07:00`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
 function monday(v) { const d = new Date(`${v}T12:00:00+07:00`); d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7)); return d.toISOString().slice(0, 10); }
 
@@ -39,7 +41,18 @@ function storeAllowed(e, store) { if (!store || str(store.status).toUpperCase() 
 function skill(ctx, id, code) { return ctx.skills.find(s => s.user_id === id && s.skill_code === code && s.status === 'ACTIVE') || null; }
 function available(ctx, e, r) { const rows = ctx.availability.filter(a => a.user_id === e.user_id && a.work_date === r.work_date); if (rows.some(a => a.availability_type === 'UNAVAILABLE' && overlap(r.start, r.end, a.start, a.end))) return { ok: false, code: HARD.UNAVAILABLE_OVERLAP }; const ok = rows.some(a => ['AVAILABLE', 'PREFERRED'].includes(a.availability_type) && contain(a.start, a.end, r.start, r.end)); return ok ? { ok: true, preferred: rows.some(a => a.availability_type === 'PREFERRED' && contain(a.start, a.end, r.start, r.end)) } : { ok: false, code: HARD.NOT_AVAILABLE }; }
 function assignedHours(as, id, pred = () => true) { return as.filter(a => a.user_id === id && pred(a)).reduce((s, a) => s + hours(a.start, a.end), 0); }
-function restOk(as, id, r, minRest) { if (!(minRest > 0)) return true; return as.filter(a => a.user_id === id && a.work_date === r.work_date).every(a => !overlap(a.start, a.end, r.start, r.end) && (a.end <= r.start ? r.start - a.end : a.start - r.end) >= minRest * 60); }
+function restOk(as, id, r, minRest) {
+  if (!(minRest > 0)) return true;
+  const rStart = absoluteMinutes(r.work_date, r.start);
+  const rEnd = absoluteMinutes(r.work_date, r.end);
+  return as.filter(a => a.user_id === id).every(a => {
+    const aStart = absoluteMinutes(a.work_date, a.start);
+    const aEnd = absoluteMinutes(a.work_date, a.end);
+    if (overlap(aStart, aEnd, rStart, rEnd)) return false;
+    const gap = aEnd <= rStart ? rStart - aEnd : aStart - rEnd;
+    return gap >= minRest * 60;
+  });
+}
 function eligible(ctx, e, r, as) {
   if (str(e.profile.status).toUpperCase() !== 'ACTIVE') return { ok: false, code: HARD.EMPLOYEE_INACTIVE };
   if (!storeAllowed(e, ctx.stores.get(r.store_id))) return { ok: false, code: HARD.STORE_NOT_ALLOWED };
