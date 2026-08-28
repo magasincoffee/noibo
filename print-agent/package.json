@@ -1,0 +1,14 @@
+{
+  "name": "magasin-print-agent",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MAGASIN local print agent for HPRT TL31E and compatible raw TCP printers.",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "check": "node --check src/server.js && node --check src/printers/raw-tcp.js && node --check src/protocol/tspl.js && node --check src/protocol/escpos.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
