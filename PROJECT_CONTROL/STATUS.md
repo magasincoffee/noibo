@@ -42,6 +42,18 @@ Publish official schedule
 Attendance
 ```
 
+### Phase 1 — Data model integrity
+
+Completed the first data-integrity hardening migration for Workforce V2 without changing scheduler behavior. The migration:
+
+- enforces `week_end = week_start + 6` for a generation run;
+- prevents a generic staffing requirement from carrying a meaningless skill level;
+- keeps `updated_at` synchronized on generation runs;
+- adds scheduler-oriented indexes for availability, active skills, constraints, staffing requirements and generation assignments;
+- documents the intended V1 semantics on key workforce columns.
+
+The deterministic scheduler engine, full review/publish RPC flow, and complete Workforce UI remain later phases.
+
 ## Printer
 
 `print-agent/` is retained for future HPRT TL31E LAN validation. Exact printer TCP port/protocol remains unverified.
