@@ -98,4 +98,18 @@
   window.setTimeout(installAdapter_,50);
   window.setTimeout(installAdapter_,250);
   window.setTimeout(installAdapter_,1000);
+
+  // UI hardening is kept as a separate file so authentication logic stays
+  // isolated from the data adapter. This script loads before app.js and uses
+  // capture-phase handling to neutralize the legacy eye-button handler.
+  (function loadAuthUiHotfix_(){
+    const id='magasin-auth-ui-hotfix';
+    if(document.querySelector('script[data-magasin-auth-ui-hotfix="1"]'))return;
+    const s=document.createElement('script');
+    s.src='auth-ui-hotfix.js?v=20260828-2';
+    s.async=false;
+    s.dataset.magasinAuthUiHotfix='1';
+    s.addEventListener('error',function(){console.warn('MAGASIN: không tải được auth-ui-hotfix.js');},{once:true});
+    document.head.appendChild(s);
+  })();
 })(window);
