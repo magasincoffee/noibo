@@ -8,21 +8,6 @@
    - Apps Script tải Index.html + các partial frontend từ GitHub
      rồi ghép thành một HtmlOutput duy nhất.
    - Không dùng iframe/CORS bridge cho runtime chính.
-
-   Public repository:
-   https://github.com/magasincoffee/noibo
-
-   Canonical frontend:
-   frontend/Index.html
-   frontend/_styles.html
-   frontend/_auth.html
-   frontend/_schedule.html
-   frontend/_attendance.html
-   frontend/_management.html
-
-   LƯU Ý:
-   - Repository phải public để UrlFetchApp đọc raw files mà không cần token.
-   - Chỉ dùng source cố định ở branch main.
 ========================================================= */
 
 const MAGASIN_GITHUB_RAW_BASE_ =
@@ -33,6 +18,7 @@ const MAGASIN_GITHUB_FRONTEND_FILES_ = [
   '_styles.html',
   '_auth.html',
   '_schedule.html',
+  '_schedule_v2.html',
   '_attendance.html',
   '_management.html'
 ];
@@ -43,9 +29,7 @@ function renderGithubFrontend_() {
 
   html = html.replace(
     /<\?!=\s*include\(['"]_styles['"]\)\s*;?\s*\?>/g,
-    function() {
-      return contents['_styles.html'] || '';
-    }
+    function() { return contents['_styles.html'] || ''; }
   );
 
   const partials = [
@@ -60,74 +44,45 @@ function renderGithubFrontend_() {
     const pattern = new RegExp(
       '<\\?!=\\s*include\\([\\\'\"]' +
       partialName +
-      '[\\\'\"]\\)\\s*;?\\s*\\?>',
-      'g'
+      '[\\\'\"]\\)\\s*;?\\s*\\?>', 'g'
     );
-
     html = html.replace(pattern, function() {
       return contents[fileName] || '';
     });
   });
 
+  html = html.replace(
+    /<\/body>/i,
+    '<script>\n' + (contents['_schedule_v2.html'] || '') + '\n</script>\n</body>'
+  );
+
   return HtmlService
     .createHtmlOutput(html)
-    .addMetaTag(
-      'viewport',
-      'width=device-width, initial-scale=1, viewport-fit=cover'
-    )
+    .addMetaTag('viewport','width=device-width, initial-scale=1, viewport-fit=cover')
     .setTitle('MAGASIN | Hệ thống nội bộ');
 }
 
 function githubFrontendLoadFiles_() {
   const requests = MAGASIN_GITHUB_FRONTEND_FILES_.map(function(fileName) {
-    return {
-      url: MAGASIN_GITHUB_RAW_BASE_ + encodeURIComponent(fileName),
-      muteHttpExceptions: true,
-      followRedirects: true
-    };
+    return {url: MAGASIN_GITHUB_RAW_BASE_ + encodeURIComponent(fileName), muteHttpExceptions: true, followRedirects: true};
   });
-
   const responses = UrlFetchApp.fetchAll(requests);
   const result = {};
-
   responses.forEach(function(response, index) {
     const fileName = MAGASIN_GITHUB_FRONTEND_FILES_[index];
     const code = response.getResponseCode();
-
     if (code < 200 || code >= 300) {
-      throw new Error(
-        'Không tải được frontend từ GitHub: ' +
-        fileName + ' (HTTP ' + code + ').'
-      );
+      throw new Error('Không tải được frontend từ GitHub: ' + fileName + ' (HTTP ' + code + ').');
     }
-
     result[fileName] = response.getContentText('UTF-8');
   });
-
-  if (!result['Index.html']) {
-    throw new Error('GitHub frontend không có Index.html.');
-  }
-
+  if (!result['Index.html']) throw new Error('GitHub frontend không có Index.html.');
   return result;
 }
 
-/*
- * PUBLIC TEST WRAPPER
- *
- * Không đặt dấu '_' ở cuối để Apps Script hiển thị hàm này
- * trong danh sách Run function của editor.
- */
 function testGithubFrontendLoader() {
   const files = githubFrontendLoadFiles_();
-  return {
-    ok: true,
-    message: 'Đã tải frontend từ GitHub thành công.',
-    files: Object.keys(files),
-    baseUrl: MAGASIN_GITHUB_RAW_BASE_
-  };
+  return {ok:true,message:'Đã tải frontend từ GitHub thành công.',files:Object.keys(files),baseUrl:MAGASIN_GITHUB_RAW_BASE_};
 }
 
-/* Giữ tên private cũ để tương thích với tài liệu/phiên bản trước. */
-function testGithubFrontendLoader_() {
-  return testGithubFrontendLoader();
-}
+function testGithubFrontendLoader_() { return testGithubFrontendLoader(); }
