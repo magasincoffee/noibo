@@ -12,49 +12,38 @@ Date: 2026-08-28
 
 ## Apps Script retirement
 
-Google Apps Script, Google Sheets, Apps Script Web App, `google.script.run`, iframe bridge and GitHub→Apps Script synchronizer are retired and removed from the active repository.
+Google Apps Script, Google Sheets, Apps Script Web App, `google.script.run`, iframe bridge and GitHub→Apps Script synchronizer are retired from the active architecture.
 
-## Validated Supabase flow
-
-- Signup creates Auth user/profile and confirmation email has been tested.
-- Email confirmation has been tested.
-- Password recovery email and password reset have been tested.
-- Username/password login has been tested.
-- PENDING account approval workflow is implemented in database schema/RPC.
-
-## Supabase data foundation
-
-Core tables include `profiles`, `stores`, `employee_grades`, `approval_requests`, `work_schedules`, `attendance`, `shift_swaps`, `kpi_records` and Workforce V2 tables for availability, skills, constraints, staffing demand and scheduler drafts.
-
-## Workforce V2
+## Workforce V2 checkpoints
 
 ```text
-Employee availability
-+ staffing demand
-+ skills / constraints
-        ↓
-Scheduler draft
-        ↓
-Manager review
-        ↓
-Publish official schedule
-        ↓
-Attendance
+Phase 0  Architecture contract            READY
+Phase 1  Data-model integrity              READY
+Phase 2  Scheduler domain rules            READY
+Phase 3  Deterministic scheduler engine   READY FOR VALIDATION GATE
+Phase 4  Independent validation gate       IN PROGRESS
 ```
+
+The canonical Workforce V2 contract is documented in `docs/architecture/MAGASIN_WORKFORCE_ARCHITECTURE_V2.md`; scheduler rules are in `docs/architecture/MAGASIN_SCHEDULER_RULES_V1.md`.
+
+## Phase 4 boundary
+
+The independent validator must re-check draft assignments and staffing coverage without trusting the scheduler's own validity flag. Hard violations are machine-readable and block publication. The validator does not publish, mutate `work_schedules`, or bypass RLS/RPC boundaries.
+
+## Remaining work
+
+- Complete Phase 4 validation coverage and explainability.
+- Complete Workforce generation/review/publish RPC lifecycle.
+- Complete Workforce V2 employee and manager/OWNER UI.
+- Complete attendance write workflow and official schedule linkage.
+- Complete shift-swap approval lifecycle.
+- Complete all other Supabase-backed business modules.
+- Add production smoke tests and runtime verification in CI/host environment.
 
 ## Printer
 
 `print-agent/` is retained for future HPRT TL31E LAN validation. Exact printer TCP port/protocol remains unverified.
 
-## Remaining work
-
-- Complete all Supabase-backed business modules.
-- Complete Workforce V2 UI and deterministic scheduler engine.
-- Complete attendance write workflow and schedule linkage.
-- Complete shift-swap approval lifecycle.
-- Design inventory/order schema before implementation.
-- Add automated tests and production smoke tests.
-
 ## Database reset
 
-The repository has been cleaned, but live Supabase Auth users and runtime data have not been destructively deleted. A database reset requires an explicit privileged Supabase operation and must preserve the owner account needed to regain access.
+Live Supabase Auth users and runtime data are not destructively reset by repository changes.
