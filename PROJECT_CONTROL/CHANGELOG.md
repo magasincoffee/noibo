@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## 2026-08-28 — WORKFORCE V2 PHASE 6 EMPLOYEE UI
+- Added `web/workforce-ui.js` as the employee-facing Workforce V2 schedule surface.
+- Replaced the employee schedule view through a narrow additive UI layer without rewriting the existing application shell.
+- Employee can view approved official schedules week-by-week.
+- Employee can navigate previous/current/next scheduling weeks.
+- Employee can view date-specific availability windows from Supabase.
+- Employee can add multiple availability windows per day.
+- Employee can select `AVAILABLE`, `PREFERRED` or `UNAVAILABLE` for each window.
+- Employee can choose a preferred store or no preferred store.
+- Employee can delete their own availability through controlled RPCs.
+- Updated `web/supabase-config.js` to load the Workforce UI layer after the application shell initializes.
+- Kept manager/OWNER generation/review/publish flows and official `work_schedules` mutation out of Phase 6.
+
 ## 2026-08-28 — WORKFORCE V2 PHASE 5 SUPABASE RPC/API
 - Added controlled Supabase RPCs for employee availability self-service.
 - Added controlled Workforce staffing-demand read/write APIs with server-side store scope and data validation.
