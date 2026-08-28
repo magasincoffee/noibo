@@ -1,32 +1,71 @@
-/* MAGASIN — Supabase Auth compatibility layer
- * Production auth flows for GitHub Pages:
- * - Login by MAGASIN username -> Supabase Auth email/password
- * - Signup email verification by 8-digit OTP
- * - Password recovery -> GitHub Pages reset screen
- * - Session persistence through Supabase Auth
- */
+/* =========================================================
+   MAGASIN — SUPABASE AUTH COMPATIBILITY LAYER
+
+   Production flow for GitHub Pages:
+   - Login: MAGASIN username -> Supabase Auth email/password
+   - Signup: Supabase email confirmation link -> GitHub Pages
+   - Recovery: Supabase password-reset link -> GitHub Pages
+   - Session: persisted by Supabase Auth
+
+   IMPORTANT:
+   The current Supabase project uses the default email templates.
+   Therefore signup confirmation is LINK-based, not OTP-based.
+========================================================= */
 (function(window){
   'use strict';
 
   const client = window.MAGASIN_SUPABASE;
-  if (!client) {
-    console.error('MAGASIN Supabase client chưa sẵn sàng.');
+  const api = window.MAGASIN_API;
+
+  if (!client || !api) {
+    console.error('MAGASIN Auth: Supabase client hoặc MAGASIN_API chưa sẵn sàng.');
     return;
   }
 
-  const originalApi = window.MAGASIN_API;
-  const originalCall = originalApi && originalApi.call;
-  const originalGetToken = originalApi && originalApi.getSessionToken;
-  const originalSetToken = originalApi && originalApi.setSessionToken;
-  const originalClearToken = originalApi && originalApi.clearSession;
+  const originalCall = api.call.bind(api);
+  const originalGetToken = api.getSessionToken ? api.getSessionToken.bind(api) : function(){ return ''; };
+  const originalSetToken = api.setSessionToken ? api.setSessionToken.bind(api) : function(){};
+  const originalClearSession = api.clearSession ? api.clearSession.bind(api) : function(){};
 
   const PROD_URL = 'https://magasincoffee.github.io/noibo/web/';
   const VERIFY_REDIRECT = PROD_URL + '?auth=verify';
   const RESET_REDIRECT = PROD_URL + '?auth=reset';
-  const PENDING_VERIFY_KEY = 'magasin_pending_verification_email';
+  const PENDING_EMAIL_KEY = 'magasin_pending_signup_email';
 
   let cachedAccessToken = '';
-  let currentSession = null;
+
+  function setMessage(text, isError){
+    const el = document.getElementById('authMessage');
+    if (!el) return;
+    el.textContent = String(text || '');
+    el.className = 'message ' + (isError ? 'error' : 'success');
+  }
+
+  function showView(name){
+    document.querySelectorAll('.auth-view').forEach(function(el){
+      el.classList.toggle('active', el.id === 'auth-' + name);
+    });
+  }
+
+  function savePendingEmail(email){
+    try { sessionStorage.setItem(PENDING_EMAIL_KEY, String(email || '')); } catch (err) {}
+  }
+
+  function clearPendingEmail(){
+    try { sessionStorage.removeItem(PENDING_EMAIL_KEY); } catch (err) {}
+  }
+
+  function getPendingEmail(){
+    try { return String(sessionStorage.getItem(PENDING_EMAIL_KEY) || '').trim(); }
+    catch (err) { return ''; }
+  }
+
+  function removeAuthCallbackFromUrl(){
+    try {
+      const cleanUrl = window.location.origin + window.location.pathname;
+      window.history.replaceState({}, document.title, cleanUrl);
+    } catch (err) {}
+  }
 
   function normalizeProfile(profile, authUser){
     profile = profile || {};
@@ -44,7 +83,7 @@
     };
   }
 
-  async function getProfile(authUser){
+  async function getProfile(authUser, requireActive){
     const { data, error } = await client
       .from('profiles')
       .select('id,username,full_name,email,phone,role,status,access_scope')
@@ -56,33 +95,33 @@
     }
 
     const profile = normalizeProfile(data, authUser);
-    if (profile.status !== 'ACTIVE') {
-      throw new Error(
-        profile.status === 'PENDING'
-          ? 'Tài khoản đã xác thực nhưng đang chờ quản lý kích hoạt.'
-          : 'Tài khoản MAGASIN đang bị vô hiệu hóa.'
-      );
+    if (requireActive && String(profile.status).toUpperCase() !== 'ACTIVE') {
+      if (String(profile.status).toUpperCase() === 'PENDING') {
+        throw new Error('Tài khoản đã xác thực nhưng đang chờ quản lý kích hoạt.');
+      }
+      throw new Error('Tài khoản MAGASIN đang bị vô hiệu hóa.');
     }
+
     return profile;
   }
 
   async function resolveEmailByUsername(username){
-    const name = String(username || '').trim();
-    if (!name) throw new Error('Vui lòng nhập tên đăng nhập.');
-    if (name.indexOf('@') !== -1) return name;
+    const value = String(username || '').trim();
+    if (!value) throw new Error('Vui lòng nhập tên đăng nhập.');
+    if (value.indexOf('@') !== -1) return value;
 
     const { data, error } = await client.rpc('resolve_login_email', {
-      p_username: name
+      p_username: value
     });
 
     if (error) {
-      throw new Error('Không thể tra cứu tên đăng nhập. Hãy kiểm tra migration resolve_login_email trên Supabase.');
+      throw new Error('Không thể tra cứu tên đăng nhập. ' + error.message);
     }
     if (!data) throw new Error('Tên đăng nhập không tồn tại.');
     return String(data);
   }
 
-  async function supabaseLogin(payload){
+  async function login(payload){
     const username = String(payload && payload.username || '').trim();
     const password = String(payload && payload.password || '');
     if (!username || !password) throw new Error('Vui lòng nhập tên đăng nhập và mật khẩu.');
@@ -92,94 +131,57 @@
     if (error) throw new Error('Tên đăng nhập hoặc mật khẩu không đúng.');
     if (!data || !data.user || !data.session) throw new Error('Supabase Auth chưa tạo phiên đăng nhập.');
 
-    currentSession = data.session;
-    cachedAccessToken = data.session.access_token || '';
-
-    let profile;
     try {
-      profile = await getProfile(data.user);
+      const profile = await getProfile(data.user, true);
+      cachedAccessToken = data.session.access_token || '';
+      return {
+        ok: true,
+        user: profile,
+        sessionToken: cachedAccessToken,
+        data: { user: profile, sessionToken: cachedAccessToken }
+      };
     } catch (err) {
-      await client.auth.signOut();
-      currentSession = null;
+      try { await client.auth.signOut(); } catch (signoutErr) {}
       cachedAccessToken = '';
       throw err;
     }
-
-    return {
-      ok: true,
-      user: profile,
-      sessionToken: data.session.access_token,
-      data: {
-        user: profile,
-        sessionToken: data.session.access_token
-      }
-    };
   }
 
-  async function supabaseGetSession(){
+  async function getSession(){
     const { data, error } = await client.auth.getSession();
     if (error) throw new Error(error.message);
+
     const session = data && data.session;
-    if (!session || !session.user) return {ok:false, message:'Chưa có phiên Supabase.'};
-
-    currentSession = session;
-    cachedAccessToken = session.access_token || '';
-    const profile = await getProfile(session.user);
-    return {
-      ok:true,
-      user:profile,
-      sessionToken:session.access_token,
-      data:{user:profile,sessionToken:session.access_token}
-    };
-  }
-
-  async function supabaseLogout(){
-    const { error } = await client.auth.signOut();
-    currentSession = null;
-    cachedAccessToken = '';
-    if (error) throw new Error(error.message);
-    return {ok:true,message:'Đã đăng xuất.'};
-  }
-
-  function savePendingEmail(email){
-    try{sessionStorage.setItem(PENDING_VERIFY_KEY,String(email||''));}catch(err){}
-  }
-
-  function getPendingEmail(){
-    try{return String(sessionStorage.getItem(PENDING_VERIFY_KEY)||'').trim();}catch(err){return '';}
-  }
-
-  function clearPendingEmail(){
-    try{sessionStorage.removeItem(PENDING_VERIFY_KEY);}catch(err){}
-  }
-
-  function showAuthView(view){
-    document.querySelectorAll('.auth-view').forEach(function(el){
-      el.classList.toggle('active', el.id === 'auth-' + view);
-    });
-  }
-
-  function showMessage(text,error){
-    const el=document.getElementById('authMessage');
-    if(!el)return;
-    el.textContent=String(text||'');
-    el.className='message '+(error?'error':'success');
-  }
-
-  function setVerifyUI(email){
-    const value=document.getElementById('verifyEmailValue');
-    if(value)value.textContent=email||'';
-    const input=document.querySelector('#verifyForm input[name="code"]');
-    if(input){
-      input.maxLength=8;
-      input.inputMode='numeric';
-      input.autocomplete='one-time-code';
-      input.pattern='[0-9]{8}';
+    if (!session || !session.user) {
+      cachedAccessToken = '';
+      return { ok: false, message: 'Chưa có phiên Supabase.' };
     }
-    showAuthView('verify');
+
+    try {
+      const profile = await getProfile(session.user, true);
+      cachedAccessToken = session.access_token || '';
+      return {
+        ok: true,
+        user: profile,
+        sessionToken: cachedAccessToken,
+        data: { user: profile, sessionToken: cachedAccessToken }
+      };
+    } catch (err) {
+      try { await client.auth.signOut(); } catch (signoutErr) {}
+      cachedAccessToken = '';
+      throw err;
+    }
   }
 
-  async function signUp(payload){
+  async function logout(){
+    const { error } = await client.auth.signOut();
+    cachedAccessToken = '';
+    originalClearSession();
+    if (error) throw new Error(error.message);
+    return { ok: true, message: 'Đã đăng xuất.' };
+  }
+
+  async function register(payload){
     const fullName = String(payload && payload.fullName || '').trim();
     const phone = String(payload && payload.phone || '').trim();
     const email = String(payload && payload.email || '').trim();
@@ -191,6 +193,8 @@
     }
     if (password.length < 8) throw new Error('Mật khẩu phải có ít nhất 8 ký tự.');
 
+    // The project is using the default Supabase confirmation-link template.
+    // The email link returns to the production GitHub Pages application.
     const { data, error } = await client.auth.signUp({
       email,
       password,
@@ -203,238 +207,211 @@
     if (error) throw new Error(error.message);
 
     savePendingEmail(email);
-    setVerifyUI(email);
+
+    // When email confirmation is enabled, data.session is normally null.
+    // If confirmation is disabled, immediately sign out so registration still
+    // follows the MAGASIN workflow: manager activation is required.
+    if (data && data.session) {
+      try { await client.auth.signOut(); } catch (signoutErr) {}
+      cachedAccessToken = '';
+    }
+
+    showView('login');
+    setMessage('Đăng ký thành công. Hãy kiểm tra email và bấm “Confirm email address” để xác thực tài khoản. Sau đó quản lý sẽ kích hoạt tài khoản.', false);
 
     return {
-      ok:true,
-      requiresEmailConfirmation: !data.session,
-      message: data.session
-        ? 'Đăng ký thành công. Tài khoản đang chờ quản lý kích hoạt.'
-        : 'Đã gửi mã xác thực 8 số đến email. Hãy nhập mã để xác thực.'
+      ok: true,
+      requiresEmailConfirmation: !(data && data.session),
+      message: 'Đăng ký thành công. Hãy kiểm tra email và bấm liên kết xác nhận.'
     };
   }
 
-  async function resendSignup(email){
-    const target=String(email||getPendingEmail()||'').trim();
-    if(!target)throw new Error('Chưa có email cần xác thực.');
-    const {error}=await client.auth.resend({
-      type:'signup',
-      email:target,
-      options:{emailRedirectTo:VERIFY_REDIRECT}
-    });
-    if(error)throw new Error(error.message);
-    savePendingEmail(target);
-    setVerifyUI(target);
-    return {ok:true,message:'Đã gửi lại mã xác thực 8 số.'};
-  }
+  async function forgotPassword(payload){
+    const email = String(payload && payload.email || '').trim();
+    if (!email) throw new Error('Vui lòng nhập email.');
 
-  async function verifySignupOtp(email,code){
-    const target=String(email||getPendingEmail()||'').trim();
-    const token=String(code||'').replace(/\D/g,'');
-    if(!target)throw new Error('Không xác định được email cần xác thực.');
-    if(token.length!==8)throw new Error('Mã xác thực phải gồm 8 chữ số.');
-
-    const {data,error}=await client.auth.verifyOtp({email:target,token,type:'email'});
-    if(error)throw new Error('Mã xác thực không đúng hoặc đã hết hạn.');
-
-    // The confirmation may create a session. The MAGASIN account must still
-    // be activated by management, so do not leave the browser signed in.
-    if(data && data.session){
-      try{await client.auth.signOut();}catch(err){}
-    }
-    clearPendingEmail();
-    showAuthView('login');
-    showMessage('Xác thực email thành công. Tài khoản đang chờ quản lý kích hoạt.');
-    return {ok:true,message:'Xác thực email thành công. Tài khoản đang chờ quản lý kích hoạt.'};
-  }
-
-  async function resetPassword(email){
-    const target = String(email || '').trim();
-    if (!target) throw new Error('Vui lòng nhập email.');
-
-    // Always return to the production GitHub Pages app. This prevents links
-    // generated during a local test from sending the user back to localhost.
-    const { error } = await client.auth.resetPasswordForEmail(target, {
+    const { error } = await client.auth.resetPasswordForEmail(email, {
       redirectTo: RESET_REDIRECT
     });
     if (error) throw new Error(error.message);
-    return {ok:true,message:'Đã gửi hướng dẫn đặt lại mật khẩu. Hãy kiểm tra email.'};
+
+    return {
+      ok: true,
+      message: 'Đã gửi hướng dẫn đặt lại mật khẩu. Hãy kiểm tra email và bấm liên kết trong thư.'
+    };
   }
 
-  async function updatePassword(password, confirmPassword){
-    if (!password || password.length < 8) throw new Error('Mật khẩu mới phải có ít nhất 8 ký tự.');
+  async function updatePassword(payload){
+    const password = String(payload && payload.password || '');
+    const confirmPassword = String(payload && payload.confirmPassword || '');
+    if (password.length < 8) throw new Error('Mật khẩu mới phải có ít nhất 8 ký tự.');
     if (password !== confirmPassword) throw new Error('Mật khẩu nhập lại không khớp.');
-    const { error } = await client.auth.updateUser({password});
+
+    const { error } = await client.auth.updateUser({ password: password });
     if (error) throw new Error(error.message);
-    try{await client.auth.signOut();}catch(err){}
-    showAuthView('login');
-    showMessage('Đã cập nhật mật khẩu. Bạn có thể đăng nhập bằng mật khẩu mới.');
-    return {ok:true,message:'Đã cập nhật mật khẩu.'};
+
+    try { await client.auth.signOut(); } catch (signoutErr) {}
+    cachedAccessToken = '';
+    originalClearSession();
+    showView('login');
+    removeAuthCallbackFromUrl();
+    setMessage('Đã cập nhật mật khẩu. Bạn có thể đăng nhập bằng mật khẩu mới.', false);
+
+    return { ok: true, message: 'Đã cập nhật mật khẩu.' };
   }
 
-  if (!originalApi) return;
-
-  originalApi.call = async function(action, payload){
-    switch(String(action || '')){
-      case 'login': return supabaseLogin(payload || {});
-      case 'getSession': return supabaseGetSession();
-      case 'logout': return supabaseLogout();
-      case 'register': return signUp(payload || {});
-      case 'forgotPassword': return resetPassword(payload && payload.email);
-      case 'updatePassword': return updatePassword(payload && payload.password, payload && payload.confirmPassword);
-      default:
-        if (typeof originalCall === 'function') return originalCall(action, payload);
-        throw new Error('API action chưa được triển khai: ' + action);
+  api.call = async function(action, payload){
+    switch (String(action || '')) {
+      case 'login': return login(payload || {});
+      case 'getSession': return getSession();
+      case 'logout': return logout();
+      case 'register': return register(payload || {});
+      case 'forgotPassword': return forgotPassword(payload || {});
+      case 'updatePassword': return updatePassword(payload || {});
+      default: return originalCall(action, payload || {});
     }
   };
 
-  originalApi.getSessionToken = function(){
-    if (cachedAccessToken) return cachedAccessToken;
-    try {
-      for (let i=0;i<localStorage.length;i++) {
-        const key = localStorage.key(i) || '';
-        if (key.indexOf('sb-') === 0 && key.indexOf('-auth-token') !== -1) return 'supabase-session';
-      }
-    } catch(err) {}
-    return typeof originalGetToken === 'function' ? originalGetToken() : '';
+  api.getSessionToken = function(){
+    return cachedAccessToken || originalGetToken();
   };
 
-  originalApi.setSessionToken = function(token){
+  api.setSessionToken = function(token){
     cachedAccessToken = String(token || '');
-    if (typeof originalSetToken === 'function') originalSetToken(token);
+    originalSetToken(token);
   };
 
-  originalApi.clearSession = function(){
+  api.clearSession = function(){
     cachedAccessToken = '';
-    currentSession = null;
-    if (typeof originalClearToken === 'function') originalClearToken();
+    originalClearSession();
   };
 
-  client.auth.onAuthStateChange(function(event, session){
-    currentSession = session || null;
-    cachedAccessToken = session && session.access_token ? session.access_token : '';
+  function handleAuthCallback(){
+    const params = new URLSearchParams(window.location.search || '');
+    const mode = params.get('auth');
 
-    if(event === 'PASSWORD_RECOVERY'){
-      showAuthView('reset');
-      showMessage('Liên kết đặt lại mật khẩu hợp lệ. Hãy tạo mật khẩu mới.');
+    if (mode === 'reset') {
+      showView('reset');
+      setMessage('Liên kết đặt lại mật khẩu hợp lệ. Hãy tạo mật khẩu mới.', false);
       return;
     }
 
-    // A confirmation link can still be clicked from an older email template.
-    // Treat it as a successful verification and return to login instead of
-    // exposing the authenticated session to the user.
-    if(event === 'SIGNED_IN' && session && session.user){
+    if (mode === 'verify') {
+      // With Supabase email-confirm links, detectSessionInUrl exchanges the
+      // callback tokens and emits SIGNED_IN below. We show a neutral state
+      // while that callback is being processed.
+      showView('login');
+      setMessage('Đang xác nhận email…', false);
+    }
+  }
+
+  client.auth.onAuthStateChange(function(event, session){
+    cachedAccessToken = session && session.access_token ? session.access_token : '';
+
+    if (event === 'PASSWORD_RECOVERY') {
+      showView('reset');
+      setMessage('Liên kết đặt lại mật khẩu hợp lệ. Hãy tạo mật khẩu mới.', false);
+      return;
+    }
+
+    if (event === 'SIGNED_IN' && session && session.user) {
       const params = new URLSearchParams(window.location.search || '');
-      const authMode = params.get('auth');
-      if(authMode === 'verify'){
+      const mode = params.get('auth');
+
+      if (mode === 'verify') {
+        // Email confirmation may create a temporary session. MAGASIN should
+        // not treat that as a login because the account still needs manager
+        // activation. Sign out and return to the login screen.
         setTimeout(async function(){
-          try{await client.auth.signOut();}catch(err){}
+          try { await client.auth.signOut(); } catch (err) {}
+          cachedAccessToken = '';
           clearPendingEmail();
-          showAuthView('login');
-          showMessage('Email đã được xác thực. Tài khoản đang chờ quản lý kích hoạt.');
-        },0);
+          showView('login');
+          removeAuthCallbackFromUrl();
+          setMessage('Email đã được xác thực thành công. Tài khoản đang chờ quản lý kích hoạt.', false);
+        }, 0);
       }
     }
   });
 
   document.addEventListener('DOMContentLoaded', function(){
-    const registerForm=document.getElementById('registerForm');
-    if(registerForm && !registerForm.dataset.supabaseBound){
-      registerForm.dataset.supabaseBound='1';
+    // The current UI originally said “Gửi mã xác thực”. That no longer matches
+    // the real Supabase flow because this project uses a confirmation LINK.
+    const registerForm = document.getElementById('registerForm');
+    if (registerForm && !registerForm.dataset.supabaseAuthBound) {
+      registerForm.dataset.supabaseAuthBound = '1';
+      const submit = registerForm.querySelector('button[type="submit"]');
+      if (submit) submit.textContent = 'Đăng ký';
+
       registerForm.addEventListener('submit', async function(e){
         e.preventDefault();
-        const btn=registerForm.querySelector('button[type="submit"]');
-        if(btn)btn.disabled=true;
-        const fd=new FormData(registerForm);
-        try{
-          const result=await originalApi.call('register',{
-            fullName:fd.get('fullName'), phone:fd.get('phone'), email:fd.get('email'),
-            username:fd.get('username'), password:fd.get('password')
+        const btn = registerForm.querySelector('button[type="submit"]');
+        if (btn) btn.disabled = true;
+        const fd = new FormData(registerForm);
+        try {
+          const result = await api.call('register', {
+            fullName: fd.get('fullName'),
+            phone: fd.get('phone'),
+            email: fd.get('email'),
+            username: fd.get('username'),
+            password: fd.get('password')
           });
-          showMessage(result.message||'Đăng ký thành công.');
-        }catch(err){showMessage(err.message||'Không thể đăng ký.',true);}
-        finally{if(btn)btn.disabled=false;}
+          setMessage(result.message || 'Đăng ký thành công.', false);
+          registerForm.reset();
+        } catch (err) {
+          setMessage(err.message || 'Không thể đăng ký.', true);
+        } finally {
+          if (btn) btn.disabled = false;
+        }
       });
     }
 
-    const forgotForm=document.getElementById('forgotForm');
-    if(forgotForm && !forgotForm.dataset.supabaseBound){
-      forgotForm.dataset.supabaseBound='1';
+    // OTP UI is intentionally disabled because the current Supabase template
+    // is the default confirmation-link template.
+    const verifyView = document.getElementById('auth-verify');
+    if (verifyView) verifyView.style.display = 'none';
+
+    const forgotForm = document.getElementById('forgotForm');
+    if (forgotForm && !forgotForm.dataset.supabaseAuthBound) {
+      forgotForm.dataset.supabaseAuthBound = '1';
       forgotForm.addEventListener('submit', async function(e){
         e.preventDefault();
-        const btn=forgotForm.querySelector('button[type="submit"]');
-        if(btn)btn.disabled=true;
-        const fd=new FormData(forgotForm);
-        try{
-          const result=await originalApi.call('forgotPassword',{email:fd.get('email')});
-          showMessage(result.message||'Đã gửi hướng dẫn.');
-        }catch(err){showMessage(err.message||'Không thể gửi email.',true);}
-        finally{if(btn)btn.disabled=false;}
+        const btn = forgotForm.querySelector('button[type="submit"]');
+        if (btn) btn.disabled = true;
+        const fd = new FormData(forgotForm);
+        try {
+          const result = await api.call('forgotPassword', { email: fd.get('email') });
+          setMessage(result.message || 'Đã gửi hướng dẫn đặt lại mật khẩu.', false);
+        } catch (err) {
+          setMessage(err.message || 'Không thể gửi email đặt lại mật khẩu.', true);
+        } finally {
+          if (btn) btn.disabled = false;
+        }
       });
     }
 
-    const verifyForm=document.getElementById('verifyForm');
-    if(verifyForm && !verifyForm.dataset.supabaseBound){
-      verifyForm.dataset.supabaseBound='1';
-      const input=verifyForm.querySelector('input[name="code"]');
-      if(input){
-        input.maxLength=8;
-        input.inputMode='numeric';
-        input.autocomplete='one-time-code';
-        input.pattern='[0-9]{8}';
-      }
-      verifyForm.addEventListener('submit', async function(e){
-        e.preventDefault();
-        const btn=verifyForm.querySelector('button[type="submit"]');
-        if(btn)btn.disabled=true;
-        const fd=new FormData(verifyForm);
-        try{
-          const result=await verifySignupOtp(getPendingEmail(),fd.get('code'));
-          showMessage(result.message||'Xác thực thành công.');
-          verifyForm.reset();
-        }catch(err){showMessage(err.message||'Không thể xác thực email.',true);}
-        finally{if(btn)btn.disabled=false;}
-      });
-    }
-
-    const resetForm=document.getElementById('resetForm');
-    if(resetForm && !resetForm.dataset.supabaseBound){
-      resetForm.dataset.supabaseBound='1';
+    const resetForm = document.getElementById('resetForm');
+    if (resetForm && !resetForm.dataset.supabaseAuthBound) {
+      resetForm.dataset.supabaseAuthBound = '1';
       resetForm.addEventListener('submit', async function(e){
         e.preventDefault();
-        const btn=resetForm.querySelector('button[type="submit"]');
-        if(btn)btn.disabled=true;
-        const fd=new FormData(resetForm);
-        try{
-          const result=await originalApi.call('updatePassword',{
-            password:fd.get('password'), confirmPassword:fd.get('confirmPassword')
+        const btn = resetForm.querySelector('button[type="submit"]');
+        if (btn) btn.disabled = true;
+        const fd = new FormData(resetForm);
+        try {
+          await api.call('updatePassword', {
+            password: fd.get('password'),
+            confirmPassword: fd.get('confirmPassword')
           });
           resetForm.reset();
-          showMessage(result.message||'Đã cập nhật mật khẩu.');
-        }catch(err){showMessage(err.message||'Không thể cập nhật mật khẩu.',true);}
-        finally{if(btn)btn.disabled=false;}
+        } catch (err) {
+          setMessage(err.message || 'Không thể cập nhật mật khẩu.', true);
+        } finally {
+          if (btn) btn.disabled = false;
+        }
       });
     }
 
-    const pending=getPendingEmail();
-    const params=new URLSearchParams(window.location.search || '');
-    if(params.get('auth') === 'verify' && pending){
-      setVerifyUI(pending);
-    }
-    if(params.get('auth') === 'reset'){
-      showAuthView('reset');
-    }
-
-    const resend=document.getElementById('resendVerifyBtn');
-    if(resend && !resend.dataset.supabaseBound){
-      resend.dataset.supabaseBound='1';
-      resend.addEventListener('click',async function(){
-        try{
-          const result=await resendSignup(getPendingEmail());
-          showMessage(result.message||'Đã gửi lại mã.');
-        }catch(err){showMessage(err.message||'Không thể gửi lại mã.',true);}
-      });
-    }
-  }, {once:true});
-
+    handleAuthCallback();
+  });
 })(window);
