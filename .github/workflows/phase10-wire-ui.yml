@@ -3,6 +3,8 @@ on:
   workflow_dispatch:
   push:
     branches: [phase10-shift-swap]
+permissions:
+  contents: write
 jobs:
   wire:
     runs-on: ubuntu-latest
@@ -41,15 +43,19 @@ jobs:
           text = text.replace(oldv, newv, 1)
           cfg.write_text(text)
           PY
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git config user.name 'magasincoffee'
+          git config user.email 'bachvantoi1994@gmail.com'
           git add web/app.js web/supabase-config.js
           git diff --cached --check
+          if git diff --cached --quiet; then exit 0; fi
           git commit -m 'feat(workforce): wire phase 10 shift swap ui'
-          git push
+          git push origin phase10-shift-swap
       - name: Remove temporary workflow
         shell: bash
         run: |
+          set -euo pipefail
           git rm .github/workflows/phase10-wire-ui.yml
+          git config user.name 'magasincoffee'
+          git config user.email 'bachvantoi1994@gmail.com'
           git commit -m 'chore: remove temporary phase10 wiring workflow'
-          git push
+          git push origin phase10-shift-swap
