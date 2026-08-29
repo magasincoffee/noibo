@@ -15,7 +15,7 @@
   async function mySchedules(){
     const {data,error}=await sb.rpc('list_my_approved_schedules_v1');
     if(error)throw error;
-    return (Array.isArray(data)?data:[]).filter(x=>String(x.status).toUpperCase()==='APPROVED');
+    return Array.isArray(data)?data:[];
   }
   async function candidates(scheduleId){
     const {data,error}=await sb.rpc('list_shift_swap_candidates_v1',{p_requester_schedule_id:scheduleId});
