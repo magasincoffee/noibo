@@ -1,7 +1,10 @@
 name: Phase10 auth and swap hotfix
 
 on:
-  workflow_dispatch:
+  push:
+    branches: [phase10-shift-swap]
+    paths:
+      - '.github/workflows/phase10-auth-swap-hotfix.yml'
 
 permissions:
   contents: write
@@ -12,8 +15,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Patch frontend bugs
-        env:
-          TARGET_BRANCH: phase10-shift-swap
         run: |
           set -euo pipefail
           python - <<'PY'
