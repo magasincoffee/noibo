@@ -11,7 +11,7 @@ on:
       - 'web/**'
       - '.github/workflows/workforce-v2.yml'
   push:
-    branches: [main, workforce-v2-integration]
+    branches: [main, workforce-v2-integration, phase10-shift-swap]
     paths:
       - 'scheduler/**'
       - 'supabase/**'
@@ -19,6 +19,49 @@ on:
       - '.github/workflows/workforce-v2.yml'
 
 jobs:
+  phase10-frontend-hotfix:
+    if: github.ref == 'refs/heads/phase10-shift-swap' && github.event.head_commit.message != 'fix: preserve password recovery and show approved swap schedules'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch password recovery and swap schedule list
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          p = Path('web/app.js')
+          s = p.read_text()
+          old = "async function boot(){bind();const params=new URLSearchParams(location.search);if(params.get('auth')==='reset')view('reset');const {data}=await sb.auth.getSession();if(data.session){try{const p=await loadProfile(data.session.user);if(params.get('auth')==='verify'){profile=p;await sb.auth.signOut();history.replaceState({},document.title,location.origin+location.pathname);return openApp(p);}return openApp(p);}catch(err){await sb.auth.signOut();}}}"
+          new = "async function boot(){bind();const params=new URLSearchParams(location.search);const isReset=params.get('auth')==='reset';if(isReset)view('reset');const {data}=await sb.auth.getSession();if(isReset)return;if(data.session){try{const p=await loadProfile(data.session.user);if(params.get('auth')==='verify'){profile=p;await sb.auth.signOut();history.replaceState({},document.title,location.origin+location.pathname);return openApp(p);}return openApp(p);}catch(err){await sb.auth.signOut();}}}"
+          if old not in s:
+              raise SystemExit('app.js boot pattern not found')
+          p.write_text(s.replace(old, new, 1))
+
+          p = Path('web/shift-swap-workforce-ui.js')
+          s = p.read_text()
+          old = "    return (Array.isArray(data)?data:[]).filter(x=>String(x.status).toUpperCase()==='APPROVED');"
+          new = "    return Array.isArray(data)?data:[];"
+          if old not in s:
+              raise SystemExit('shift-swap schedule filter pattern not found')
+          p.write_text(s.replace(old, new, 1))
+          PY
+
+      - name: Verify hotfix syntax
+        run: |
+          node --check web/app.js
+          node --check web/shift-swap-workforce-ui.js
+
+      - name: Commit hotfix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add web/app.js web/shift-swap-workforce-ui.js
+          git commit -m "fix: preserve password recovery and show approved swap schedules"
+          git push origin HEAD:phase10-shift-swap
+
   scheduler:
     runs-on: ubuntu-latest
     defaults:
