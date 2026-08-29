@@ -1,0 +1,36 @@
+name: Phase 10 fix UI
+on:
+  push:
+    branches: [phase10-shift-swap]
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Replace schedule loader
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('web/shift-swap-workforce-ui.js')
+          t=p.read_text()
+          old="const {data,error}=await sb.rpc('get_my_schedule');"
+          new="const {data,error}=await sb.rpc('list_my_approved_schedules_v1');"
+          if old not in t: raise SystemExit('schedule loader anchor not found')
+          p.write_text(t.replace(old,new,1))
+          PY
+          git config user.name 'magasincoffee'
+          git config user.email 'bachvantoi1994@gmail.com'
+          git add web/shift-swap-workforce-ui.js
+          git diff --cached --check
+          git commit -m 'fix(workforce): use authoritative schedule ids for shift swap'
+          git push origin phase10-shift-swap
+      - name: Remove temporary workflow
+        run: |
+          git rm .github/workflows/phase10-fix-ui.yml
+          git config user.name 'magasincoffee'
+          git config user.email 'bachvantoi1994@gmail.com'
+          git commit -m 'chore: remove temporary phase10 fix workflow'
+          git push origin phase10-shift-swap
