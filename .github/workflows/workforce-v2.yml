@@ -1,5 +1,7 @@
 name: Workforce V2 CI
 
+# Final integration checkpoint: keep scheduler, frontend syntax, and regression guards on every Workforce change.
+
 on:
   pull_request:
     branches: [main]
