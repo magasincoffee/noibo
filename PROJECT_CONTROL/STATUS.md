@@ -64,16 +64,20 @@ E2E test data was removed after verification. Current production test cleanup ch
 
 ## CI / main stability
 
-- `main` is at signed merge commit `823b58dd328d65d90e96555d40b38875b8b038c7`.
-- Workforce V2 CI passed on the post-merge `main` commit.
+- `main` is at merge commit `823b58dd328d65d90e96555d40b38875b8b038c7` from merged Phase 10.
+- Workforce V2 CI passed on post-merge `main`.
 - The merge commit is GitHub-verified.
-- `main` is currently unprotected; branch protection/ruleset hardening remains an operational follow-up.
+- GitHub ruleset `Protect main` is ACTIVE and targets `main`.
+- `main` requires pull requests, 1 approving review, the three Workforce V2 CI job checks, and blocks force pushes/deletions.
+- Bypass list is empty.
 
 ## Migration history finding
 
 Production contains 23 entries in `supabase_migrations.schema_migrations`, while the repository currently contains 20 migration files. Later Workforce migration timestamps do not map 1:1 to the production ledger versions.
 
-This is treated as **migration-history drift**, not confirmed schema drift. The live schema and runtime behavior were verified. Do not manually rewrite `schema_migrations` in production. Before the next schema-changing phase, perform an explicit migration-history reconciliation/reconstruction checkpoint.
+This is treated as **migration-history drift**, not confirmed schema drift. The live schema and runtime behavior were verified. Do not manually rewrite `schema_migrations` in production. A reconciliation note is maintained in `PROJECT_CONTROL/MIGRATION_RECONCILIATION.md`.
+
+A true fresh-PostgreSQL replay could not be executed in the assistant environment because no local PostgreSQL server is available and outbound `git clone` is unavailable. This is explicitly recorded as an evidence gap, not a PASS.
 
 ## Supabase Advisor findings
 
@@ -83,15 +87,14 @@ Performance Advisor continues to report existing RLS init-plan, multiple-permiss
 
 ## GitHub Pages
 
-During Phase 10 browser verification, Pages was temporarily configured to the Phase-10 branch. For the stable post-merge baseline, Pages should publish from `main`. This setting cannot be changed through the connected GitHub API in this session and requires the repository Pages settings UI.
+GitHub Pages has been switched back to the stable `main` branch with `/ (root)` after Phase 10 browser verification. The site URL remains `https://magasincoffee.github.io/noibo/`.
 
 ## Next operational checkpoint
 
-1. Point GitHub Pages source back to `main`.
-2. Reconcile migration history before the next database-changing phase.
-3. Harden `main` branch protection/rules.
-4. Review global Security Advisor findings as a separate security-hardening task.
-5. Only then start Phase 11.
+1. Complete migration-history reconciliation with a real fresh PostgreSQL/Supabase environment when one is available.
+2. Keep `main` protected and all schema changes behind reviewed pull requests.
+3. Review global Security Advisor findings as a separate hardening task.
+4. Only then start Phase 11.
 
 ## Database reset
 
