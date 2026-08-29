@@ -37,3 +37,67 @@ document.addEventListener('click',capture,true);
 document.addEventListener('click',e=>{if(e.target.closest('#ma-save-req'))saveReq();if(e.target.closest('#ma-create-gen'))createGen();if(e.target.closest('#ma-load-assign'))loadAssignments();},false);
 window.MAGASIN_WORKFORCE_MANAGER_UI={render:renderPage};
 })(window,document);
+
+/* MAGASIN — Manager generation UX guard v1 */
+(function(){
+  'use strict';
+  const sb=window.MAGASIN_SUPABASE;
+  if(!sb)return;
+  let storeLoadInFlight=null;
+  async function loadActiveStores(){
+    if(storeLoadInFlight)return storeLoadInFlight;
+    storeLoadInFlight=(async()=>{
+      const {data,error}=await sb.from('stores').select('id,code,name,status').eq('status','ACTIVE').order('code');
+      if(error)throw error;
+      const stores=Array.isArray(data)?data:[];
+      const ids=new Set(stores.map(x=>String(x.id)));
+      ['ma-store','ma-req-store'].forEach(id=>{
+        const el=document.getElementById(id);
+        if(!el)return;
+        const current=el.value;
+        const head='<option value="">Tất cả cửa hàng</option>';
+        el.innerHTML=head+stores.map(x=>`<option value="${String(x.id).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;')}">${String(x.name||x.code||x.id).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</option>`).join('');
+        if(ids.has(String(current)))el.value=current;
+      });
+      return stores;
+    })().finally(()=>{storeLoadInFlight=null;});
+    return storeLoadInFlight;
+  }
+  function status(text,error){
+    const x=document.getElementById('ma-status');
+    if(!x)return;
+    x.textContent=text||'';
+    x.className='ma-status '+(error?'ma-error':'ma-ok');
+  }
+  async function ensureStoreOptions(){
+    try{return await loadActiveStores();}
+    catch(err){status('Không tải được danh sách cửa hàng: '+(err?.message||err),true);return []}
+  }
+  document.addEventListener('click',async function(ev){
+    const btn=ev.target.closest?.('#ma-create-gen');
+    if(!btn)return;
+    const sel=document.getElementById('ma-store');
+    if(!sel)return;
+    if(!sel.value){
+      ev.preventDefault();
+      ev.stopImmediatePropagation();
+      await ensureStoreOptions();
+      status('Vui lòng chọn một cửa hàng cụ thể trước khi tạo lịch nháp.',true);
+    }
+  },true);
+  const observer=new MutationObserver(()=>{
+    const sel=document.getElementById('ma-store');
+    if(sel && !sel.dataset.storeUxReady){
+      sel.dataset.storeUxReady='1';
+      ensureStoreOptions();
+    }
+    const req=document.getElementById('ma-req-store');
+    if(req && !req.dataset.storeUxReady){
+      req.dataset.storeUxReady='1';
+      ensureStoreOptions();
+    }
+  });
+  observer.observe(document.documentElement,{childList:true,subtree:true});
+  ensureStoreOptions();
+})();
+
