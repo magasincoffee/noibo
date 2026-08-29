@@ -13,13 +13,15 @@ PR: #15
 - `set_updated_at()` search path pinned to `public`.
 - P8 regression guard suite passes on production after validator restoration.
 - Frontend Workforce JS syntax check passes in GitHub Actions.
+- OWNER Workforce V2 route reaches the manager/OWNER UI.
+- Manager staffing-demand screen loads without table-permission errors.
+- Manager generation UX now loads ACTIVE stores independently from staffing requirements and blocks draft creation until a specific store is selected.
 
 ## OPEN GATES
-1. GitHub Actions scheduler tests must pass on integration commit.
-2. GitHub Pages browser smoke test with real authenticated OWNER/STAFF accounts.
-3. Reconcile Supabase migration metadata timestamps with Git filename conventions; do not rewrite production history blindly.
-4. Review legacy Security Advisor warnings; remediate only after confirming no login/approval/runtime regression.
-5. CI must remain green on the final PR head before merge.
+1. GitHub Actions final integration-branch run must pass on the final PR head.
+2. GitHub Pages browser smoke test must verify the current manager generation UX and employee schedule/availability + attendance paths.
+3. Supabase migration metadata timestamps are documented against stable Git migration names; production history must not be rewritten blindly.
+4. Legacy Security Advisor notices remain separate hardening work unless a new Workforce-critical regression is found.
 
 ## Security advisor classification
 ### Workforce-critical
