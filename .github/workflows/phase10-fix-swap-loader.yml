@@ -1,0 +1,38 @@
+name: Phase 10 fix swap loader
+on:
+  workflow_dispatch:
+  push:
+    branches: [phase10-shift-swap]
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch index loader
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('web/index.html')
+          s = p.read_text(encoding='utf-8')
+          old = '<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="supabase-config.js?v=20260828-supabase-only"></script><script src="app.js?v=20260828-supabase-only"></script><script src="workforce-ui.js?v=20260828-workforce-v2"></script><script src="manager-workforce-ui.js?v=20260828-workforce-manager-v2"></script>'
+          new = '<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="supabase-config.js?v=20260829-workforce-v2-phase10"></script><script src="app.js?v=20260829-workforce-v2-phase10"></script><script src="workforce-ui.js?v=20260829-workforce-v2-phase10"></script><script src="manager-workforce-ui.js?v=20260829-workforce-v2-phase10"></script><script src="shift-swap-workforce-ui.js?v=20260829-workforce-v2-phase10"></script>'
+          if old not in s:
+              raise SystemExit('expected script block not found')
+          p.write_text(s.replace(old,new,1), encoding='utf-8')
+          PY
+      - name: Commit fix
+        run: |
+          git config user.name 'MAGASIN'
+          git config user.email 'bachvantoi1994@gmail.com'
+          git add web/index.html
+          git commit -m 'fix(workforce): load phase10 shift swap UI directly' || exit 0
+          git push
+      - name: Remove temporary workflow
+        run: |
+          git rm .github/workflows/phase10-fix-swap-loader.yml
+          git config user.name 'MAGASIN'
+          git config user.email 'bachvantoi1994@gmail.com'
+          git commit -m 'chore: remove temporary phase10 loader workflow'
+          git push
