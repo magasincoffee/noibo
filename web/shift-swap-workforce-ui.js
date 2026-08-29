@@ -6,7 +6,6 @@
   const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   const role=()=>String(window.MAGASIN_PROFILE?.role||window.MAGASIN_APP_PROFILE?.role||'').toUpperCase();
   const manager=()=>['OWNER','STORE_MANAGER'].includes(role());
-  const appProfile=()=>window.MAGASIN_PROFILE||window.MAGASIN_APP_PROFILE||null;
   function box(title,body){return '<section class="card panel" id="'+rootId+'"><div class="section-head"><div><h2>'+title+'</h2><p>Đổi ca trên lịch chính thức · Phase 10</p></div></div>'+body+'</section>';}
   function err(msg){return '<div class="error-box">'+esc(msg)+'</div>';}
   function ok(msg){return '<div class="message success">'+esc(msg)+'</div>';}
@@ -41,18 +40,55 @@
           <label class="auth-label">Ca của bạn<select id="swapRequesterSchedule">${opts}</select></label>
           <label class="auth-label">Ca muốn đổi<select id="swapTargetSchedule"><option value="">Chọn ca…</option></select></label>
         </div>
-        <label class="auth-label">Lý do<textarea id="swapReason" rows="3" style="width:100%;box-sizing:border-box;border:1px solid #d7e0ea;border-radius:12px;padding:12px;background:#f7f9ff"></textarea></label>
+        <label class="auth-label">Lý do<textarea id="swapReason" rows="3" required style="width:100%;box-sizing:border-box;border:1px solid #d7e0ea;border-radius:12px;padding:12px;background:#f7f9ff"></textarea></label>
         <button id="swapSubmit" class="primary-action">Gửi yêu cầu đổi ca</button>
         <div style="margin-top:22px"><h3>Yêu cầu của tôi</h3><div class="table-wrap"><table class="table"><thead><tr><th>Trạng thái</th><th>Ca của bạn</th><th>Ca đổi</th><th>Nhân viên</th><th>Lý do</th><th></th></tr></thead><tbody id="swapMineRows"></tbody></table></div></div>
         ${manager()?'<div id="swapManagerArea" style="margin-top:24px"></div>':''}`);
       const req=document.getElementById('swapRequesterSchedule');
       const target=document.getElementById('swapTargetSchedule');
+      const submit=document.getElementById('swapSubmit');
+      function syncSubmitState(){submit.disabled=!req.value||!target.value;}
       async function loadTargets(){
-        if(!req.value){target.innerHTML='<option value="">Chưa chọn ca</option>';return;}
-        try{const cs=await candidates(req.value);target.innerHTML=cs.length?'<option value="">Chọn ca…</option>'+cs.map(x=>'<option value="'+esc(x.schedule_id)+'">'+esc(x.work_date)+' · '+esc(fmt(x))+' · '+esc(x.store_code||'')+' · '+esc(x.user_name||'')+'</option>').join(''):'<option value="">Không có ca phù hợp</option>';}catch(e){target.innerHTML='<option value="">Không tải được</option>';document.getElementById('swapEmployeeMessage').innerHTML=err(e.message);}
+        if(!req.value){target.innerHTML='<option value="">Chưa chọn ca</option>';syncSubmitState();return;}
+        target.disabled=true;
+        target.innerHTML='<option value="">Đang tải ca phù hợp…</option>';
+        try{
+          const cs=await candidates(req.value);
+          target.innerHTML=cs.length?'<option value="">Chọn ca…</option>'+cs.map(x=>'<option value="'+esc(x.schedule_id)+'">'+esc(x.work_date)+' · '+esc(fmt(x))+' · '+esc(x.store_code||'')+' · '+esc(x.user_name||'')+'</option>').join(''):'<option value="">Không có ca phù hợp</option>';
+        }catch(e){
+          target.innerHTML='<option value="">Không tải được</option>';
+          document.getElementById('swapEmployeeMessage').innerHTML=err(e.message);
+        }finally{
+          target.disabled=false;
+          syncSubmitState();
+        }
       }
-      req.onchange=loadTargets;await loadTargets();
-      document.getElementById('swapSubmit').onclick=async()=>{const b=document.getElementById('swapSubmit');const m=document.getElementById('swapEmployeeMessage');b.disabled=true;b.textContent='Đang gửi…';m.innerHTML='';try{const {data,error}=await sb.rpc('submit_shift_swap_request',{p_requester_schedule_id:req.value,p_target_schedule_id:target.value,p_reason:document.getElementById('swapReason').value});if(error)throw error;m.innerHTML=ok('Đã gửi yêu cầu đổi ca: '+data);document.getElementById('swapReason').value='';await renderEmployee();}catch(e){m.innerHTML=err(e.message);}finally{b.disabled=false;b.textContent='Gửi yêu cầu đổi ca';}};
+      req.onchange=loadTargets;
+      target.onchange=syncSubmitState;
+      await loadTargets();
+      submit.onclick=async()=>{
+        const b=submit;
+        const m=document.getElementById('swapEmployeeMessage');
+        const reason=document.getElementById('swapReason').value.trim();
+        if(!req.value){m.innerHTML=err('Vui lòng chọn ca của bạn.');return;}
+        if(!target.value){m.innerHTML=err('Vui lòng chọn ca muốn đổi.');syncSubmitState();return;}
+        if(!reason){m.innerHTML=err('Vui lòng nhập lý do đổi ca.');document.getElementById('swapReason').focus();return;}
+        b.disabled=true;
+        b.textContent='Đang gửi…';
+        m.innerHTML='';
+        try{
+          const {data,error}=await sb.rpc('submit_shift_swap_request',{p_requester_schedule_id:req.value,p_target_schedule_id:target.value,p_reason:reason});
+          if(error)throw error;
+          m.innerHTML=ok('Đã gửi yêu cầu đổi ca.');
+          document.getElementById('swapReason').value='';
+          await renderEmployee();
+        }catch(e){
+          m.innerHTML=err(e.message);
+        }finally{
+          b.disabled=false;
+          b.textContent='Gửi yêu cầu đổi ca';
+        }
+      };
       document.getElementById('swapMineRows').innerHTML=rows.length?rows.map(x=>`<tr><td>${statusBadge(x.status)}</td><td>${esc((x.requester_schedule_date||'')+' '+(x.requester_start||'')+'–'+(x.requester_end||''))}</td><td>${esc((x.target_schedule_date||'')+' '+(x.target_start||'')+'–'+(x.target_end||''))}</td><td>${esc(x.target_user_name||'')}</td><td>${esc(x.reason||'')}</td><td>${x.status==='PENDING'?'<button class="secondary-action js-cancel-swap" data-id="'+esc(x.id)+'">Hủy</button>':''}</td></tr>`).join(''):'<tr><td colspan="6">Chưa có yêu cầu.</td></tr>';
       document.querySelectorAll('.js-cancel-swap').forEach(b=>b.onclick=async()=>{try{const {error}=await sb.rpc('cancel_shift_swap',{p_swap_id:b.dataset.id});if(error)throw error;await renderEmployee();}catch(e){document.getElementById('swapEmployeeMessage').innerHTML=err(e.message);}});
       if(manager())await renderManager();
@@ -75,7 +111,6 @@
   }
   async function render(mode){
     if(!sb)return;
-    if(mode==='manager' && !manager())return renderEmployee();
     return renderEmployee();
   }
   window.MAGASIN_SHIFT_SWAP_UI={render};
