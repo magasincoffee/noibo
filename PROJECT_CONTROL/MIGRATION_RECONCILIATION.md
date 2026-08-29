@@ -57,6 +57,14 @@ The production schema was independently inspected after Phase 10. The live datab
 
 No evidence was found that the production-only ledger entries correspond to currently missing Workforce objects.
 
+## Local reconciliation result
+
+A true fresh-PostgreSQL replay was attempted conceptually but **could not be executed in this assistant environment** because there is no local PostgreSQL server available and outbound `git clone` is unavailable. Therefore:
+
+- **Static schema reconciliation: PASS** for the inspected Workforce V2/P5–P10 tables, keys, RPC surface and RLS boundaries.
+- **Fresh PostgreSQL replay: NOT RUN.** This is an explicit evidence gap, not a passing result.
+- No production schema or migration metadata was changed as part of this reconciliation.
+
 ## Decision
 
 Classify the mismatch as **migration-history drift / resequencing history**, not confirmed schema drift.
