@@ -9,6 +9,7 @@ on:
       - 'scheduler/**'
       - 'supabase/**'
       - 'web/**'
+      - 'PROJECT_CONTROL/**'
       - '.github/workflows/workforce-v2.yml'
   push:
     branches: [main, workforce-v2-integration]
@@ -16,6 +17,7 @@ on:
       - 'scheduler/**'
       - 'supabase/**'
       - 'web/**'
+      - 'PROJECT_CONTROL/**'
       - '.github/workflows/workforce-v2.yml'
 
 jobs:
