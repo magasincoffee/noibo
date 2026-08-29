@@ -1,6 +1,31 @@
 /* MAGASIN Workforce V2 Phase 10 — Shift Swap UI */
 (function(window, document){
   'use strict';
+  const authErrorTranslations={
+    'New password should be different from the old password.':'Mật khẩu mới phải khác mật khẩu cũ.',
+    'New password should be different from the old password':'Mật khẩu mới phải khác mật khẩu cũ.',
+    'Password should be at least 8 characters.':'Mật khẩu phải có ít nhất 8 ký tự.',
+    'Password should be at least 8 characters':'Mật khẩu phải có ít nhất 8 ký tự.',
+    'Invalid or expired password recovery link':'Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.',
+    'Auth session missing!':'Phiên đặt lại mật khẩu không còn hợp lệ. Vui lòng yêu cầu liên kết mới.',
+    'Auth session expired!':'Phiên đặt lại mật khẩu đã hết hạn. Vui lòng yêu cầu liên kết mới.'
+  };
+  function translateAuthMessage(){
+    const el=document.getElementById('authMessage');
+    if(!el)return;
+    const raw=String(el.textContent||'').trim();
+    if(!raw)return;
+    const translated=authErrorTranslations[raw];
+    if(translated){
+      el.textContent=translated;
+      return;
+    }
+    for(const [source,target] of Object.entries(authErrorTranslations)){
+      if(raw.includes(source)){el.textContent=raw.replace(source,target);return;}
+    }
+  }
+  new MutationObserver(translateAuthMessage).observe(document.documentElement,{subtree:true,childList:true,characterData:true});
+  window.addEventListener('load',translateAuthMessage);
   const sb=window.MAGASIN_SUPABASE;
   const rootId='workforceShiftSwapUi';
   const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
