@@ -1,0 +1,59 @@
+name: Workforce V2 CI
+
+# Final integration checkpoint: keep scheduler, frontend syntax, and regression guards on every Workforce change.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scheduler/**'
+      - 'supabase/**'
+      - 'web/**'
+      - '.github/workflows/workforce-v2.yml'
+  push:
+    branches: [main, workforce-v2-integration]
+    paths:
+      - 'scheduler/**'
+      - 'supabase/**'
+      - 'web/**'
+      - '.github/workflows/workforce-v2.yml'
+
+jobs:
+  scheduler:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: scheduler
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --ignore-scripts
+      - run: npm run check
+      - run: npm test
+
+  web-syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Syntax check Workforce frontend JS
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in web/app.js web/workforce-ui.js web/attendance-workforce-ui.js web/manager-workforce-ui.js web/supabase-config.js; do
+            node --check "$f"
+          done
+
+  supabase-regression-guards:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate regression fixture syntax
+        run: |
+          test -s supabase/tests/workforce_v2_review_publish_regression.sql
+          grep -q "validate_schedule_generation_v1" supabase/tests/workforce_v2_review_publish_regression.sql
+          grep -q "x.work_date + x.end_time" supabase/tests/workforce_v2_review_publish_regression.sql

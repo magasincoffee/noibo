@@ -1,0 +1,12 @@
+{
+  "name": "magasin-workforce-scheduler",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Deterministic Workforce V2 scheduler engine for MAGASIN NOIBO.",
+  "main": "src/api.js",
+  "scripts": {
+    "test": "node --test",
+    "check": "node --check src/index.js && node --check src/validator.js && node --check src/api.js && node --check test/scheduler.test.js && node --check test/validator.test.js"
+  },
+  "engines": { "node": ">=20" }
+}
