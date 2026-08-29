@@ -1,0 +1,60 @@
+name: Phase10 auth and swap hotfix
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch frontend bugs
+        env:
+          TARGET_BRANCH: phase10-shift-swap
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          p = Path('web/app.js')
+          s = p.read_text()
+          old = "async function boot(){bind();const params=new URLSearchParams(location.search);if(params.get('auth')==='reset')view('reset');const {data}=await sb.auth.getSession();if(data.session){try{const p=await loadProfile(data.session.user);if(params.get('auth')==='verify'){profile=p;await sb.auth.signOut();history.replaceState({},document.title,location.origin+location.pathname);return openApp(p);}return openApp(p);}catch(err){await sb.auth.signOut();}}}"
+          new = "async function boot(){bind();const params=new URLSearchParams(location.search);const isReset=params.get('auth')==='reset';if(isReset)view('reset');const {data}=await sb.auth.getSession();if(isReset)return;if(data.session){try{const p=await loadProfile(data.session.user);if(params.get('auth')==='verify'){profile=p;await sb.auth.signOut();history.replaceState({},document.title,location.origin+location.pathname);return openApp(p);}return openApp(p);}catch(err){await sb.auth.signOut();}}}"
+          if old not in s:
+              raise SystemExit('app.js boot pattern not found')
+          p.write_text(s.replace(old, new, 1))
+
+          p = Path('web/shift-swap-workforce-ui.js')
+          s = p.read_text()
+          old = "    return (Array.isArray(data)?data:[]).filter(x=>String(x.status).toUpperCase()==='APPROVED');"
+          new = "    return Array.isArray(data)?data:[];"
+          if old not in s:
+              raise SystemExit('shift-swap schedule filter pattern not found')
+          p.write_text(s.replace(old, new, 1))
+          PY
+
+      - name: Verify syntax
+        run: |
+          node --check web/app.js
+          node --check web/shift-swap-workforce-ui.js
+
+      - name: Commit hotfix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add web/app.js web/shift-swap-workforce-ui.js
+          git commit -m "fix: preserve password recovery and show approved swap schedules"
+          git push origin HEAD:phase10-shift-swap
+
+      - name: Remove temporary workflow
+        if: always()
+        run: |
+          rm -f .github/workflows/phase10-auth-swap-hotfix.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -u .github/workflows/phase10-auth-swap-hotfix.yml
+          git commit -m "chore: remove phase10 hotfix workflow" || true
+          git push origin HEAD:phase10-shift-swap || true
