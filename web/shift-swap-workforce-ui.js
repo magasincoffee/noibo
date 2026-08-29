@@ -13,7 +13,7 @@
   function fmt(row){return `${row.start_time}–${row.end_time}`;}
   function scheduleLabel(x){return `${esc(x.date||x.work_date||'')} · ${esc(x.start||x.start_time||'')}–${esc(x.end||x.end_time||'')} · ${esc(x.store_name||x.store_code||'')}`;}
   async function mySchedules(){
-    const {data,error}=await sb.rpc('get_my_schedule');
+    const {data,error}=await sb.rpc('list_my_approved_schedules_v1');
     if(error)throw error;
     return (Array.isArray(data)?data:[]).filter(x=>String(x.status).toUpperCase()==='APPROVED');
   }
