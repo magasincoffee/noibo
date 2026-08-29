@@ -44,7 +44,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for f in web/app.js web/workforce-ui.js web/attendance-workforce-ui.js web/manager-workforce-ui.js web/supabase-config.js; do
+          for f in web/app.js web/workforce-ui.js web/attendance-workforce-ui.js web/manager-workforce-ui.js web/shift-swap-workforce-ui.js web/supabase-config.js; do
             node --check "$f"
           done
 
