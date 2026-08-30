@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## 2026-08-30 — EMPLOYEE PROTOTYPE V40 FROZEN
+- Frozen Employee UI at **v40** as the current approved visual checkpoint.
+- Added browser-accessible prototype: `PROJECT_CONTROL/prototypes/employee/magasin_noibo_employee_v40.html`.
+- v40 keeps the approved Employee information architecture and business logic unchanged.
+- Settings now keep `Đổi mật khẩu` collapsed by default and integrate `Thông báo` as a matching collapsed section; notification delivery remains accessible from the Header bell.
+- Visual refinement direction remains: Inter typography, 8px spacing scale, restrained elevation, consistent radius/border system, clean SaaS + Soft UI + Enterprise treatment.
+- Dashboard and schedule rules remain unchanged, including equal two-column tiers, full-width weekly registration module, KPI summaries, attendance reporting, and official/registration shift colors.
+- **NEXT TASK: THỰC HIỆN PHẦN GIAO DIỆN CỦA MANAGER.**
+- Production backend implementation remains deferred until Manager and Owner UI are finalized.
+
 ## 2026-08-30 — EMPLOYEE PROTOTYPE V38 FROZEN + NEXT MANAGER UI
 - Frozen the current Employee prototype UI checkpoint at v38 for the current design cycle.
 - Employee Dashboard layout finalized as: `Hôm nay` | `Công việc hôm nay`; `KPI tháng này` | `Academy`; `Đăng ký lịch làm tuần tới` full-width.
@@ -53,24 +63,24 @@
 
 ## 2026-08-27 — CLEAN GITHUB → APPS SCRIPT SYNC V2
 - Replaced the previous merge-style synchronization model with an exact canonical project replacement model.
-- Added `PROJECT_CONTROL/appsscript.json` as the canonical Apps Script manifest.
-- Updated `backend/20_Đồng_bộ_GitHub.gs` to normalize Apps Script API file names correctly and rebuild the target project from GitHub `main` only.
-- Added `previewDongBoGitHubSyncPlan()` to show additions, replacements and removals before a clean sync.
-- Clean sync creates an Apps Script Version backup before `projects.updateContent`.
-- Clean sync removes legacy/non-canonical Apps Script files instead of preserving them, preventing duplicate global declarations such as `USER_HEADERS`.
+- Added PROJECT_CONTROL/appsscript.json as the canonical Apps Script manifest.
+- Updated backend/20_Đồng_bộ_GitHub.gs to normalize Apps Script API file names correctly and rebuild the target project from GitHub main only.
+- Added previewDongBoGitHubSyncPlan() to show additions, replacements and removals before a clean sync.
+- Clean sync creates an Apps Script Version backup before projects.updateContent.
+- Clean sync removes legacy/non-canonical Apps Script files instead of preserving them, preventing duplicate global declarations such as USER_HEADERS.
 - Deployment remains a separate controlled step.
 
 ## 2026-08-27 — PHASE 2 AUTH / SESSION / ROLE
-- Re-read the canonical project from `magasincoffee/noibo` → `main`.
+- Re-read the canonical project from magasincoffee/noibo → main.
 - Confirmed GitHub-loaded Apps Script runtime and user-validated schedule write path.
-- Upgraded `backend/05_Phiên_đăng_nhập.gs` so live sessions rehydrate current user status, role and access scope from the `Người dùng` Sheet.
-- Upgraded `backend/07_Phân_quyền.gs` with canonical page permissions and capability keys for all four roles.
-- Added `backend/19_Phase2_Auth_Session_Role_Test.gs` for non-destructive verification in Apps Script.
+- Upgraded backend/05_Phiên_đăng_nhập.gs so live sessions rehydrate current user status, role and access scope from the Người dùng Sheet.
+- Upgraded backend/07_Phân_quyền.gs with canonical page permissions and capability keys for all four roles.
+- Added backend/19_Phase2_Auth_Session_Role_Test.gs for non-destructive verification in Apps Script.
 - Updated the dependency map and project status to reflect the production runtime path.
 - Marked GitHub Pages bridge files as experimental/non-production.
 
 ## 2026-08-27 — INITIAL REPOSITORY NORMALIZATION
-- Initialized canonical repository structure for `magasincoffee/noibo`.
+- Initialized canonical repository structure for magasincoffee/noibo.
 - Added PROJECT_CONTROL manifest, project map and dependency map.
 - Moved active backend/frontend source into canonical directories by file role.
 - Kept exported/version-suffixed source names out of the canonical source paths.
