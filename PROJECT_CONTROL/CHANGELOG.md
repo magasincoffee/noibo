@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## 2026-08-30 — EMPLOYEE PROTOTYPE V38 FROZEN + NEXT MANAGER UI
+- Frozen the current Employee prototype UI checkpoint at v38 for the current design cycle.
+- Employee Dashboard layout finalized as: `Hôm nay` | `Công việc hôm nay`; `KPI tháng này` | `Academy`; `Đăng ký lịch làm tuần tới` full-width.
+- Removed duplicate `Thông báo` navigation from the Employee sidebar; notification access remains in the Header bell.
+- Settings `Đổi mật khẩu` is collapsed by default and expands on demand.
+- Attendance report includes date-range filtering and summary of total shifts, hours and pay.
+- Employee KPI is summarized on Dashboard and detailed KPI pages expose unmet targets, missing work, violations/incidents and Academy gaps.
+- Store KPI detail compares actual values with explicit targets.
+- Official schedule and schedule-registration previews use the agreed shift color convention: yellow for morning family (`06:00–14:00`), red for midday/afternoon family (`12:00–17:00`), cyan for afternoon/evening family (`14:00–22:00`).
+- Weekly schedule registration was separated into its own card while preserving the expandable registration form.
+- **NEXT TASK: THỰC HIỆN PHẦN GIAO DIỆN CỦA MANAGER.**
+- This checkpoint is prototype/UI work only; it does not replace or mutate the canonical production `web/` Workforce implementation.
+
 ## 2026-08-28 — WORKFORCE V2 PHASE 7 MANAGER / OWNER UI
 - Added `web/manager-workforce-ui.js` for manager/OWNER Workforce operations.
 - Added weekly staffing-demand view with store/week navigation.
