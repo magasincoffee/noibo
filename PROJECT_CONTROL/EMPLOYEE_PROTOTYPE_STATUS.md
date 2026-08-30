@@ -4,9 +4,12 @@ Date: 2026-08-30
 
 ## Current checkpoint
 
-The approved Employee prototype is frozen at **v40** for the current UI review cycle.
+The approved Employee prototype is now maintained as a **single canonical UI file: v40** for the current UI review cycle.
 
-The browser prototype is maintained at `PROJECT_CONTROL/prototypes/employee/magasin_noibo_employee_v40.html` on this prototype branch. This checkpoint records the approved decisions so future work can resume without losing context.
+Canonical prototype file:
+`PROJECT_CONTROL/prototypes/employee/magasin_noibo_employee_v40.html`
+
+The superseded v38 standalone prototype has been removed from this branch to prevent multiple competing Employee versions.
 
 ## Approved Employee dashboard layout
 
@@ -49,6 +52,16 @@ The browser prototype is maintained at `PROJECT_CONTROL/prototypes/employee/maga
 - The expandable section and arrow remain intact.
 - Registration preview shift cards use the same shift-color convention as the official schedule.
 
+## Approved Shift Swap business logic
+
+- Swap existing official assignments; employees do not invent arbitrary replacement dates/times.
+- Partner selects/accepts the proposed swap.
+- Required Manager/Owner approval occurs before finalization.
+- Final official schedule ownership exchange must be atomic.
+- Validate eligibility, store scope, overlap/conflict rules and Workforce constraints.
+- Explain unequal hours and potential attendance/pay/KPI impact.
+- Final backend implementation is deferred until Manager and Owner UI are finalized.
+
 ## Approved UI visual direction
 
 - Clean SaaS + Soft UI + Enterprise.
@@ -63,8 +76,6 @@ The browser prototype is maintained at `PROJECT_CONTROL/prototypes/employee/maga
 ## Next project task
 
 **NEXT: THỰC HIỆN PHẦN GIAO DIỆN CỦA MANAGER.**
-
-This is the next UI/prototype work item after the Employee prototype checkpoint is accepted.
 
 ## Scope boundary
 
