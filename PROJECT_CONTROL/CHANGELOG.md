@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## 2026-08-30 — EMPLOYEE PROTOTYPE CONTINUITY
+- Established `PROJECT_CONTROL/EMPLOYEE_PROTOTYPE_STATUS.md` as the continuity checkpoint for Employee prototype iterations.
+- Confirmed current work is prototype-first; production Workforce V2 integration remains a later step.
+- Employee Header keeps the notification bell as the single notification entry point.
+- Removed the duplicated `🔔 Thông báo` navigation item from the Employee prototype sidebar.
+- Preserved the Notification view for access from the Header bell.
+- Future Employee prototype changes must preserve approved UI decisions, update the continuity record, and save the checkpoint to GitHub.
+
 ## 2026-08-28 — WORKFORCE V2 PHASE 7 MANAGER / OWNER UI
 - Added `web/manager-workforce-ui.js` for manager/OWNER Workforce operations.
 - Added weekly staffing-demand view with store/week navigation.
