@@ -4,9 +4,9 @@ Date: 2026-08-30
 
 ## Current checkpoint
 
-The approved Employee prototype is frozen at **v38** for the current UI review cycle.
+The approved Employee prototype is frozen at **v40** for the current UI review cycle.
 
-The standalone HTML prototype is maintained in the conversation as the visual working artifact until the next approved revision. This checkpoint records the approved decisions so future work can resume without losing context.
+The browser prototype is maintained at `PROJECT_CONTROL/prototypes/employee/magasin_noibo_employee_v40.html` on this prototype branch. This checkpoint records the approved decisions so future work can resume without losing context.
 
 ## Approved Employee dashboard layout
 
@@ -48,6 +48,17 @@ The standalone HTML prototype is maintained in the conversation as the visual wo
 - `Đăng ký lịch làm tuần tiếp theo` is separated from the official weekly schedule into its own card.
 - The expandable section and arrow remain intact.
 - Registration preview shift cards use the same shift-color convention as the official schedule.
+
+## Approved UI visual direction
+
+- Clean SaaS + Soft UI + Enterprise.
+- Inter typography hierarchy.
+- 8px-based spacing scale.
+- Consistent card/input/button radii.
+- Restrained elevation: light shadows for content, stronger elevation only for overlays.
+- White surfaces on a light blue-gray application background.
+- Thin neutral borders and clear visual hierarchy.
+- No developer/system notes or implementation instructions presented as user-facing copy.
 
 ## Next project task
 
