@@ -46,7 +46,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for f in web/app.js web/workforce-ui.js web/attendance-workforce-ui.js web/manager-workforce-ui.js web/shift-swap-workforce-ui.js web/supabase-config.js; do
+          for f in web/app.js web/workforce-ui.js web/attendance-workforce-ui.js web/manager-workforce-ui.js web/shift-swap-workforce-ui.js web/schedule-ui-v2.js web/supabase-config.js; do
             node --check "$f"
           done
 
@@ -59,6 +59,12 @@ jobs:
           test -s supabase/tests/workforce_v2_review_publish_regression.sql
           grep -q "validate_schedule_generation_v1" supabase/tests/workforce_v2_review_publish_regression.sql
           grep -q "x.work_date + x.end_time" supabase/tests/workforce_v2_review_publish_regression.sql
+          test -s supabase/tests/schedule_read_v1_controlled_publish_attendance.sql
+          grep -q "publish_schedule_generation" supabase/tests/schedule_read_v1_controlled_publish_attendance.sql
+          grep -q "list_my_approved_schedules_v2" supabase/tests/schedule_read_v1_controlled_publish_attendance.sql
+          grep -q "get_manager_weekly_schedule" supabase/tests/schedule_read_v1_controlled_publish_attendance.sql
+          grep -q "clock_in_for_schedule(schedule_id)" supabase/tests/schedule_read_v1_controlled_publish_attendance.sql
+          grep -q "clock_out_attendance(attendance_id)" supabase/tests/schedule_read_v1_controlled_publish_attendance.sql
 
   Workforce-V2-CI:
     name: Workforce V2 CI

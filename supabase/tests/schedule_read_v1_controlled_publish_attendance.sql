@@ -11,11 +11,12 @@
 -- 4) review_schedule_generation(..., 'APPROVED') must return REVIEWED + valid=true.
 -- 5) publish_schedule_generation(...) must return PUBLISHED + published=true + inserted_schedule_count=1.
 -- 6) list_my_approved_schedules_v2(...) must return the published schedule for the STAFF user.
--- 7) clock_in_for_schedule(schedule_id) creates attendance with the same schedule_id.
--- 8) clock_out_attendance(attendance_id) completes the attendance while preserving schedule_id.
--- 9) rollback removes the complete controlled fixture.
+-- 7) get_manager_weekly_schedule(...) verifies the approved schedule is readable only within the Manager/Owner store scope.
+-- 8) clock_in_for_schedule(schedule_id) creates attendance with the same schedule_id.
+-- 9) clock_out_attendance(attendance_id) completes the attendance while preserving schedule_id.
+-- 10) rollback removes the complete controlled fixture.
 
 -- Authorization checks:
--- STAFF -> Manager schedule RPC must be rejected by ROLE_NOT_ALLOWED.
+-- STAFF -> get_manager_weekly_schedule(...) must be rejected by ROLE_NOT_ALLOWED.
 -- STORE_MANAGER + access_scope CN1 -> CN1 read allowed; CN2 read denied by STORE_NOT_ALLOWED.
 -- OWNER -> permitted store reads allowed.
