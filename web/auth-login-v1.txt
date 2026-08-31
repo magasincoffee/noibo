@@ -1,0 +1,1 @@
+Production authentication entrypoint: web/index.html. Username is resolved by public.resolve_login_email before Supabase password sign-in.
