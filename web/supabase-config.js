@@ -14,10 +14,10 @@
   window.MAGASIN_SUPABASE_CONFIG=CONFIG;
   window.MAGASIN_SUPABASE=window.supabase.createClient(CONFIG.url,CONFIG.publishableKey,{auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:true}});
   function loadWorkforceUi(){
-    ['workforce-ui.js','attendance-workforce-ui.js','manager-workforce-ui.js','shift-swap-workforce-ui.js'].forEach((src)=>{
+    ['workforce-ui.js','attendance-workforce-ui.js','manager-workforce-ui.js','shift-swap-workforce-ui.js','schedule-ui.js'].forEach((src)=>{
       if(document.querySelector('script[data-magasin-module="'+src+'"]'))return;
       const script=document.createElement('script');
-      script.src=src+'?v=20260829-workforce-v2-phase10';
+      script.src=src+'?v=20260831-schedule-v1';
       script.async=false;
       script.dataset.magasinModule=src;
       document.head.appendChild(script);
