@@ -1,0 +1,29 @@
+name: Migration Governance CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/**'
+      - 'PROJECT_CONTROL/MIGRATION_*'
+      - 'scripts/check_migration_governance.py'
+      - '.github/workflows/migration-governance.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/**'
+      - 'PROJECT_CONTROL/MIGRATION_*'
+      - 'scripts/check_migration_governance.py'
+      - '.github/workflows/migration-governance.yml'
+
+jobs:
+  migration-governance:
+    name: Migration Governance
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate canonical migration governance
+        run: python scripts/check_migration_governance.py
