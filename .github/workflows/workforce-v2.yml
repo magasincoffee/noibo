@@ -51,27 +51,20 @@ jobs:
           for f in web/app.js web/workforce-ui.js web/attendance-workforce-ui.js web/manager-workforce-ui.js web/shift-swap-workforce-ui.js web/schedule-ui-v2.js web/supabase-config.js web/security-runtime.js; do
             node --check "$f"
           done
-          test -s web/secure-app-runtime.html
+          node <<'NODE'
+          const fs=require('fs');
+          const checks=[
+            ['web/secure-app-runtime.html',['MAGASIN application','security-runtime.js']],
+            ['web/index.html',['supabase.auth.signUp','resetPasswordForEmail','PASSWORD_RECOVERY','updateUser({password','secure-app-runtime.html?target=employee','secure-app-runtime.html?target=manager']],
+            ['web/security-runtime.js',['MAGASIN_SECURITY','updateUser({password','Bảo mật tài khoản']],
+            ['web/manager-workforce-ui.js',['validate_schedule_generation_v1','review_schedule_generation','publish_schedule_generation','Kiểm tra','Duyệt lịch','Phát hành']],
+            ['supabase/migrations/20260828001600_attendance_schedule_link_v1.sql',['get_my_today_schedules','clock_in_for_schedule','clock_out_attendance','get_my_attendance_v2','APPROVED_SCHEDULE_NOT_FOUND']]
+          ];
+          for(const [file,needles] of checks){const s=fs.readFileSync(file,'utf8');for(const n of needles){if(!s.includes(n))throw new Error(`${file}: missing ${n}`)}}
+          NODE
           grep -q "list_my_approved_schedules_v2.*weekArg" web/schedule.html
           ! grep -q "const arg={p_store_id" web/schedule.html
           grep -q "function employeeLabel" web/schedule.html
-          grep -q "validate_schedule_generation_v1" web/manager-workforce-ui.js
-          grep -q "review_schedule_generation" web/manager-workforce-ui.js
-          grep -q "publish_schedule_generation" web/manager-workforce-ui.js
-          grep -q "DRAFT → kiểm tra server-side → REVIEWED" web/manager-workforce-ui.js
-          grep -q "supabase.auth.signUp" web/index.html
-          grep -q "resetPasswordForEmail" web/index.html
-          grep -q "PASSWORD_RECOVERY" web/index.html
-          grep -q "updateUser({password" web/index.html
-          grep -q "updateUser({password" web/security-runtime.js
-          grep -q "secure-app-runtime.html?target=employee" web/index.html
-          grep -q "secure-app-runtime.html?target=manager" web/index.html
-
-          test -f supabase/migrations/20260828001600_attendance_schedule_link_v1.sql
-          grep -q "create or replace function public.get_my_today_schedules" supabase/migrations/20260828001600_attendance_schedule_link_v1.sql
-          grep -q "create or replace function public.clock_in_for_schedule" supabase/migrations/20260828001600_attendance_schedule_link_v1.sql
-          grep -q "create or replace function public.clock_out_attendance" supabase/migrations/20260828001600_attendance_schedule_link_v1.sql
-          grep -q "create or replace function public.get_my_attendance_v2" supabase/migrations/20260828001600_attendance_schedule_link_v1.sql
 
       - name: Syntax check Employee V40 runtime bridge
         shell: bash
