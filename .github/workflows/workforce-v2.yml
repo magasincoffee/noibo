@@ -11,6 +11,7 @@ on:
       - 'supabase/**'
       - 'web/**'
       - 'PROJECT_CONTROL/**'
+      - 'giaodien'
       - '.github/workflows/workforce-v2.yml'
   push:
     branches: [main, workforce-v2-integration]
@@ -20,6 +21,7 @@ on:
       - 'supabase/**'
       - 'web/**'
       - 'PROJECT_CONTROL/**'
+      - 'giaodien'
       - '.github/workflows/workforce-v2.yml'
 
 jobs:
