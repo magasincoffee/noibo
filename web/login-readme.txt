@@ -1,0 +1,1 @@
+Use /web/index.html as the login entry point.
