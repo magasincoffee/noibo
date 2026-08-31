@@ -21,9 +21,16 @@ Added RPCs:
 The Manager RPC enforces OWNER / STORE_MANAGER role and store scope using `can_access_store`, and returns only `APPROVED` schedules for a Monday-Sunday week.
 The Employee V2 RPC returns only the caller's `APPROVED` schedules and exposes the authoritative `schedule_id`.
 
+### Web integration
+- `web/schedule-ui.js` is loaded by the authenticated app shell through `web/supabase-config.js`.
+- The legacy standalone `web/schedule.html` remains as a safe runtime checkpoint.
+- The integrated module renders the current official schedule directly from Supabase, supports weekly navigation, Manager/Owner store filtering, shared shift colors, read-only detail modal and Attendance navigation.
+- The module no longer assumes a `home_store_code` field that is not present in the read RPC contract.
+
 ### Verification
 Supabase runtime confirmed both functions exist as `SECURITY DEFINER STABLE` with the expected signatures and return shapes.
 The production database currently has four active stores and the current official `work_schedules` table contains zero rows in the inspected environment, so data-path result counts are currently zero rather than a failed read.
+The latest Workforce V2 CI run for this branch completed successfully before the latest UI-only commit; the latest commit should be rechecked by CI before merge.
 
 ## Not changed
 - No `work_schedules` schema change.
@@ -31,9 +38,11 @@ The production database currently has four active stores and the current officia
 - No publish behavior change.
 - No direct Manager schedule mutation from Lịch làm.
 
-## Next
-1. Integrate the new schedule read RPC into the production web UI.
+## Remaining validation
+1. Re-run CI on the latest branch commit.
 2. Validate Manager scope with real Manager test identities for CN1/CN2 and Owner.
 3. Validate Employee V40 against `list_my_approved_schedules_v2`.
-4. Run end-to-end tests: Publish → official schedule → Lịch làm → Attendance.
-5. Only then close the Schedule module as backend-ready.
+4. Create or use a real approved schedule fixture in a controlled test environment and run Publish → official schedule → Lịch làm → Attendance.
+
+## Current readiness
+Schedule read architecture and web integration are implemented. The remaining blocker to declaring full end-to-end production readiness is test data / authorized runtime identities for a published `APPROVED` schedule and final protected-branch merge validation.
