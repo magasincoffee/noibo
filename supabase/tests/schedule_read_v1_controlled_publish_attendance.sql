@@ -1,0 +1,21 @@
+-- MAGASIN Schedule Read V1 controlled regression
+-- Executed against Supabase with a transaction + rollback during development.
+-- It validates: registration fixture -> review -> real publish RPC -> approved schedule
+-- -> Employee read RPC -> attendance clock-in/out linkage.
+-- No persistent fixture should be committed by this script.
+
+-- Control checklist used during runtime validation:
+-- 1) create a temporary AVAILABLE window for an active STAFF user.
+-- 2) create_schedule_generation(..., 'CONTROLLED_TEST_V1').
+-- 3) insert one ACCEPTED generation assignment.
+-- 4) review_schedule_generation(..., 'APPROVED') must return REVIEWED + valid=true.
+-- 5) publish_schedule_generation(...) must return PUBLISHED + published=true + inserted_schedule_count=1.
+-- 6) list_my_approved_schedules_v2(...) must return the published schedule for the STAFF user.
+-- 7) clock_in_for_schedule(schedule_id) creates attendance with the same schedule_id.
+-- 8) clock_out_attendance(attendance_id) completes the attendance while preserving schedule_id.
+-- 9) rollback removes the complete controlled fixture.
+
+-- Authorization checks:
+-- STAFF -> Manager schedule RPC must be rejected by ROLE_NOT_ALLOWED.
+-- STORE_MANAGER + access_scope CN1 -> CN1 read allowed; CN2 read denied by STORE_NOT_ALLOWED.
+-- OWNER -> permitted store reads allowed.
