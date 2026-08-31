@@ -51,6 +51,10 @@ jobs:
           for f in web/app.js web/workforce-ui.js web/attendance-workforce-ui.js web/manager-workforce-ui.js web/shift-swap-workforce-ui.js web/schedule-ui-v2.js web/supabase-config.js; do
             node --check "$f"
           done
+          # Schedule V1 runtime contract: employee and manager RPCs have different argument shapes.
+          grep -q "list_my_approved_schedules_v2.*weekArg" web/schedule.html
+          ! grep -q "const arg={p_store_id" web/schedule.html
+          grep -q "function employeeLabel" web/schedule.html
 
   supabase-regression-guards:
     runs-on: ubuntu-latest
