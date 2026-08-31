@@ -1,5 +1,4 @@
 name: Workforce V2 CI
-
 on:
   pull_request:
     branches: [main]
@@ -7,7 +6,6 @@ on:
   push:
     branches: [main, workforce-v2-integration]
     paths: ['index.html','scheduler/**','supabase/**','web/**','PROJECT_CONTROL/**','.github/workflows/workforce-v2.yml']
-
 jobs:
   scheduler:
     runs-on: ubuntu-latest
@@ -19,7 +17,6 @@ jobs:
       - run: npm install --ignore-scripts
       - run: npm run check
       - run: npm test
-
   web-syntax:
     runs-on: ubuntu-latest
     steps:
@@ -30,12 +27,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for f in web/app.js web/workforce-ui.js web/attendance-workforce-ui.js web/manager-workforce-ui.js web/shift-swap-workforce-ui.js web/schedule-ui-v2.js web/supabase-config.js web/security-runtime.js; do node --check "$f"; done
+          for f in web/app.js web/workforce-ui.js web/attendance-workforce-ui.js web/manager-workforce-ui.js web/shift-swap-workforce-ui.js web/schedule-ui-v2.js web/supabase-config.js web/security-runtime.js web/auth-runtime-v3.js; do node --check "$f"; done
           node <<'NODE'
           const fs=require('fs');
           const checks=[
             ['web/secure-app-runtime.html',['MAGASIN application','security-runtime.js']],
-            ['web/index.html',['sb.auth.signUp','resetPasswordForEmail','PASSWORD_RECOVERY','updateUser({password','secure-app-runtime.html?target=employee','secure-app-runtime.html?target=manager']],
+            ['web/index.html',['auth-runtime-v3.js','view-login','view-register','view-forgot','view-reset']],
+            ['web/auth-runtime-v3.js',['sb.auth.signInWithPassword','sb.auth.signUp','sb.auth.resetPasswordForEmail','PASSWORD_RECOVERY','sb.auth.updateUser({password','resolve_login_email']],
             ['web/security-runtime.js',['MAGASIN_SECURITY','updateUser({password','Bảo mật tài khoản']],
             ['web/manager-workforce-ui.js',['validate_schedule_generation_v1','review_schedule_generation','publish_schedule_generation','Kiểm tra','Duyệt lịch','Phát hành']],
             ['supabase/migrations/20260828001600_attendance_schedule_link_v1.sql',['get_my_today_schedules','clock_in_for_schedule','clock_out_attendance','get_my_attendance_v2','APPROVED_SCHEDULE_NOT_FOUND']]
@@ -45,7 +43,6 @@ jobs:
           grep -q "list_my_approved_schedules_v2.*weekArg" web/schedule.html
           ! grep -q "const arg={p_store_id" web/schedule.html
           grep -q "function employeeLabel" web/schedule.html
-
       - name: Syntax check Employee V40 runtime bridge
         shell: bash
         run: |
@@ -56,7 +53,6 @@ jobs:
           grep -q "clock_in_for_schedule" web/employee-v40-runtime.html
           grep -q "clock_out_attendance" web/employee-v40-runtime.html
           grep -q "get_my_attendance_v2" web/employee-v40-runtime.html
-
   supabase-regression-guards:
     runs-on: ubuntu-latest
     steps:
@@ -72,7 +68,6 @@ jobs:
           grep -q "get_manager_weekly_schedule" supabase/tests/schedule_read_v1_controlled_publish_attendance.sql
           grep -q "clock_in_for_schedule(schedule_id)" supabase/tests/schedule_read_v1_controlled_publish_attendance.sql
           grep -q "clock_out_attendance(attendance_id)" supabase/tests/schedule_read_v1_controlled_publish_attendance.sql
-
   Workforce-V2-CI:
     name: Workforce V2 CI
     runs-on: ubuntu-latest
