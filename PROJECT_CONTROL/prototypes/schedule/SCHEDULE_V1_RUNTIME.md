@@ -2,7 +2,7 @@
 
 ## Runnable product
 - `web/schedule.html` is a standalone official-schedule viewer connected to Supabase.
-- `web/schedule-ui.js` contains the official reader integrated into the authenticated app shell.
+- `web/schedule-ui.js` is loaded by `web/supabase-config.js` and integrates the official reader into the authenticated application shell.
 
 ## Behavior
 - Authenticated users only.
@@ -13,7 +13,7 @@
 - Manager can filter by active store.
 - Clicking a schedule opens read-only details.
 - No edit/delete/publish actions exist in Lịch làm.
-- Attendance navigation is read-only navigation to the existing attendance module.
+- Attendance navigation remains read-only navigation to the existing attendance module.
 
 ## Color contract
 - 06:00–14:00: yellow
@@ -28,8 +28,7 @@
 - Supabase RPCs are deployed.
 - `work_schedules` currently has 0 rows in the inspected environment, so the reader correctly renders `Không có ca` until a schedule is published.
 - Unauthenticated direct execution of the Manager RPC is rejected with `AUTH_REQUIRED`.
+- Main-shell loader integration is complete on `feat/schedule-read-v1`: `supabase-config.js` now loads `schedule-ui.js` alongside the Workforce/Attendance modules.
 
-## Main-shell integration
-- `schedule-ui.js` is committed on `feat/schedule-read-v1`.
-- The module is isolated so it can replace the legacy `schedule()` rendering without rewriting unrelated app behavior.
-- The main-shell loader change is intentionally kept as a separate protected-branch integration step.
+## Production integration rule
+The Schedule module does not write `work_schedules`. Workforce Publish remains the only path that materializes the official schedule. Lịch làm is a read-only consumer of official schedule state.
