@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>MAGASIN — Nhân viên</title>
+  <style>
+    html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f4f7fb}
+    iframe{display:block;width:100%;height:100%;border:0;background:#f4f7fb}
+    #runtimeError{position:fixed;left:16px;right:16px;bottom:16px;z-index:9999;display:none;padding:12px 14px;border:1px solid #f2c8c0;border-radius:12px;background:#fff4f1;color:#9d3f30;font:600 13px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif;box-shadow:0 8px 24px rgba(15,23,42,.12)}
+  </style>
+</head>
+<body>
+  <iframe id="employeeApp" title="MAGASIN Employee V40"></iframe>
+  <div id="runtimeError" role="alert"></div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+  (function(){
+    'use strict';
+
+    const SUPABASE_URL='https://menvbzlsncmpuvnaifxa.supabase.co';
+    const SUPABASE_KEY='sb_publishable_HsvCS6HDZnCDInd9PUoh0g_V34wJVqx';
+    const TZ='Asia/Ho_Chi_Minh';
+    const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:true}});
+    const frame=document.getElementById('employeeApp');
+    const runtimeError=document.getElementById('runtimeError');
+    let profile=null;
+    let currentSchedules=[];
+
+    const esc=(v)=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+    const pad=(n)=>String(n).padStart(2,'0');
+    const time5=(v)=>v?String(v).slice(0,5):'';
+    const dateParts=(date=new Date())=>{
+      const p=new Intl.DateTimeFormat('en-US',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(date);
+      const x={};p.forEach(a=>x[a.type]=a.value);return {y:Number(x.year),m:Number(x.month),d:Number(x.day)};
+    };
+    const keyOf=(p)=>`${p.y}-${pad(p.m)}-${pad(p.d)}`;
+    const todayKey=()=>keyOf(dateParts());
+    const localDate=(key)=>new Date(`${key}T00:00:00+07:00`);
+    const mondayKey=(key)=>{
+      const d=localDate(key);
+      const day=d.getUTCDay()||7;
+      d.setUTCDate(d.getUTCDate()-(day-1));
+      return `${d.getUTCFullYear()}-${pad(d.getUTCMonth()+1)}-${pad(d.getUTCDate())}`;
+    };
+    const addDays=(key,n)=>{const d=localDate(key);d.setUTCDate(d.getUTCDate()+n);return `${d.getUTCFullYear()}-${pad(d.getUTCMonth()+1)}-${pad(d.getUTCDate())}`;};
+    const labelVN=(key)=>{const [y,m,d]=key.split('-');return `${d}/${m}/${y}`;};
+    const dow=['Thứ Hai','Thứ Ba','Thứ Tư','Thứ Năm','Thứ Sáu','Thứ Bảy','Chủ Nhật'];
+    const roleLabel={STAFF:'Nhân viên',EMPLOYEE:'Nhân viên',STORE_MANAGER:'Quản lý cửa hàng',OWNER:'Chủ sở hữu'};
+    const shiftClass=(start)=>{const h=Number(String(start||'').slice(0,2));if(h>=14)return 'evening-cyan';if(h>=12)return 'afternoon-red';return 'morning-yellow';};
+
+    function setError(message){runtimeError.textContent=message;runtimeError.style.display='block';setTimeout(()=>runtimeError.style.display='none',8000);}
+
+    async function authenticate(){
+      const {data,error}=await sb.auth.getSession();
+      if(error)throw error;
+      if(!data.session){window.location.replace('./index.html');return false;}
+      const {data:p,error:pe}=await sb.from('profiles').select('id,full_name,username,role,status').eq('id',data.session.user.id).single();
+      if(pe)throw pe;
+      if(String(p.status||'').toUpperCase()!=='ACTIVE')throw new Error('Tài khoản chưa được kích hoạt.');
+      profile=p;return true;
+    }
+
+    function patchIdentity(doc){
+      if(!profile)return;
+      const name=profile.full_name||profile.username||'Nhân viên';
+      const role=roleLabel[String(profile.role||'STAFF').toUpperCase()]||String(profile.role||'STAFF');
+      const strong=doc.querySelector('.header-user-text strong');
+      const span=doc.querySelector('.header-user-text span');
+      const avatar=doc.querySelector('.header-avatar');
+      if(strong)strong.textContent=name;
+      if(span)span.textContent=role;
+      if(avatar)avatar.textContent=name.charAt(0).toUpperCase();
+      const title=doc.querySelector('#headerPageTitle'); if(title)title.textContent='Tổng quan';
+    }
+
+    function buildDay(doc,index,weekStart,rows){
+      const k=addDays(weekStart,index);
+      const day=doc.createElement('div');
+      day.className='day'+(k===todayKey()?' today':'');
+      const list=rows.filter(r=>r.work_date===k).sort((a,b)=>String(a.start_time).localeCompare(String(b.start_time)));
+      day.innerHTML=`<div class="dow">${dow[index]}</div><div class="date">${labelVN(k)}</div>`+(k===todayKey()?'<span class="today-tag">HÔM NAY</span>':'');
+      if(!list.length){day.insertAdjacentHTML('beforeend','<div class="muted" style="margin-top:18px">Không có ca</div>');return day;}
+      list.forEach(r=>{
+        const sh=doc.createElement('div');sh.className=`shift ${shiftClass(r.start_time)}`;sh.innerHTML=`<b>${esc(time5(r.start_time))}–${esc(time5(r.end_time))}</b><div class="store">${esc(r.store_code||r.store_name||'Cửa hàng')}</div>`;day.appendChild(sh);
+      });
+      return day;
+    }
+
+    async function loadSchedules(){
+      const w=mondayKey(todayKey());
+      const {data,error}=await sb.rpc('list_my_approved_schedules_v2',{p_week_start:w});
+      if(error)throw error;
+      currentSchedules=Array.isArray(data)?data:[];
+      const doc=frame.contentDocument;
+      const days=doc.querySelector('#view-schedule .schedule-main-panel .days');
+      if(days){days.replaceChildren(...Array.from({length:7},(_,i)=>buildDay(doc,i,w,currentSchedules)));}
+      const pill=doc.querySelector('#view-schedule .schedule-main-panel .pill');
+      if(pill)pill.textContent=`Tuần ${labelVN(w)}–${labelVN(addDays(w,6))}`;
+
+      const today=todayKey();
+      const todayRows=currentSchedules.filter(r=>r.work_date===today);
+      const todayBox=doc.querySelector('#view-dashboard .today-shift');
+      const empty=doc.querySelector('#view-dashboard #todayNoShift');
+      const protoToggle=doc.querySelector('#view-dashboard button[onclick="toggleTodayState(this)"]')?.parentElement;
+      if(protoToggle)protoToggle.remove();
+      if(todayBox && empty){
+        if(todayRows.length){
+          const r=todayRows[0];
+          todayBox.style.display='block';
+          empty.style.display='none';
+          todayBox.innerHTML=`<div class="today-time">${esc(time5(r.start_time))}–${esc(time5(r.end_time))}</div><div class="today-store">${esc(r.store_code||r.store_name||'Cửa hàng')}</div><div class="today-actions"><button id="v40TodayAttendance" class="btn primary" type="button">Chấm công</button><button class="btn secondary" type="button" data-runtime-nav="inventory">Nhập tồn hàng</button></div>`;
+          doc.getElementById('v40TodayAttendance')?.addEventListener('click',()=>{frame.contentWindow.showView('attendance');renderAttendance();});
+          doc.querySelector('[data-runtime-nav="inventory"]')?.addEventListener('click',()=>frame.contentWindow.showView('inventory'));
+        }else{
+          todayBox.style.display='none';
+          empty.style.display='block';
+        }
+      }
+      const sub=doc.querySelector('#view-dashboard #pageSub');
+      if(sub)sub.textContent=`Hôm nay · ${dow[(dateParts().d?localDate(today).getUTCDay():6)||7]-1||0}`;
+      patchIdentity(doc);
+    }
+
+    function attendanceStatus(row){
+      if(row.attendance_status==='OPEN')return {label:'Đang làm',action:'out'};
+      if(row.attendance_status==='COMPLETED')return {label:'Đã hoàn tất',action:'done'};
+      return {label:'Chưa chấm',action:'in'};
+    }
+
+    async function renderAttendance(){
+      const doc=frame.contentDocument;
+      const box=doc.querySelector('#view-attendance .attendance-entry-grid .panel');
+      if(!box)return;
+      try{
+        const {data,error}=await sb.rpc('get_my_today_schedules');
+        if(error)throw error;
+        const rows=Array.isArray(data)?data:[];
+        box.innerHTML='<div class="section-title">Chấm công hôm nay</div><div id="v40AttendanceList" class="timeline"></div>';
+        const list=doc.getElementById('v40AttendanceList');
+        if(!rows.length){list.innerHTML='<div class="empty">Hôm nay không có ca được phát hành.</div>';return;}
+        rows.forEach(r=>{
+          const state=attendanceStatus(r);const item=doc.createElement('div');item.className='timeline-item';
+          const meta=`${esc(time5(r.start_time))}–${esc(time5(r.end_time))} · ${esc(r.store_code||r.store_name||'Cửa hàng')}`;
+          let action='';
+          if(state.action==='in')action='<button class="btn primary" data-att-action="in">Bắt đầu ca</button>';
+          else if(state.action==='out')action='<button class="btn primary" data-att-action="out">Kết thúc ca</button>';
+          else action='<span class="badge green">Đã hoàn tất</span>';
+          item.innerHTML=`<div><b>${meta}</b><div class="muted" style="margin-top:5px">${esc(state.label)}${r.late_minutes?` · Trễ ${r.late_minutes} phút`:''}${r.early_minutes?` · Sớm ${r.early_minutes} phút`:''}</div></div><div style="margin-top:10px">${action}</div>`;
+          item.querySelector('[data-att-action="in"]')?.addEventListener('click',()=>clockIn(r.schedule_id));
+          item.querySelector('[data-att-action="out"]')?.addEventListener('click',()=>clockOut(r.attendance_id));
+          list.appendChild(item);
+        });
+      }catch(e){box.innerHTML=`<div class="att-error">Không tải được ca chấm công: ${esc(e.message||e)}</div>`;}
+      await loadAttendanceHistory();
+    }
+
+    async function clockIn(scheduleId){
+      try{const {error}=await sb.rpc('clock_in_for_schedule',{p_schedule_id:scheduleId});if(error)throw error;await renderAttendance();await loadSchedules();}
+      catch(e){setError(`Không thể bắt đầu ca: ${e.message||e}`);}
+    }
+    async function clockOut(attendanceId){
+      try{const {error}=await sb.rpc('clock_out_attendance',{p_attendance_id:attendanceId});if(error)throw error;await renderAttendance();await loadSchedules();}
+      catch(e){setError(`Không thể kết thúc ca: ${e.message||e}`);}
+    }
+
+    function historyRange(doc){
+      const from=doc.getElementById('attendanceFrom')?.value||'';
+      const to=doc.getElementById('attendanceTo')?.value||'';
+      return {from,to};
+    }
+
+    async function loadAttendanceHistory(){
+      const doc=frame.contentDocument;const table=doc.getElementById('attendanceHistoryTable');if(!table)return;
+      const {from,to}=historyRange(doc);
+      const {data,error}=await sb.rpc('get_my_attendance_v2',{p_from_date:from||null,p_to_date:to||null});
+      if(error){setError(`Không tải được lịch sử chấm công: ${error.message||error}`);return;}
+      const rows=Array.isArray(data)?data:[];
+      const body=table.querySelector('tbody');
+      body.innerHTML=rows.map(r=>`<tr><td>${esc(labelVN(r.work_date))}</td><td>${esc(r.store_code||r.store_name||'')}</td><td>${esc(time5(r.check_in_time||r.check_in))}</td><td>${esc(time5(r.check_out_time||r.check_out))}</td><td data-hours>${Number(r.hours_worked||0).toFixed(1)}</td><td data-income="${Number(r.amount||0)}">${Number(r.amount||0).toLocaleString('vi-VN')}đ</td></tr>`).join('');
+      updateAttendanceSummary(doc,rows);
+    }
+
+    function updateAttendanceSummary(doc,rows){
+      let hours=0,income=0;rows.forEach(r=>{hours+=Number(r.hours_worked||0);income+=Number(r.amount||0);});
+      const n=(id,v)=>{const e=doc.getElementById(id);if(e)e.textContent=v;};
+      n('attendanceTotalShifts',rows.length+' ca');
+      n('attendanceTotalHours',hours.toFixed(1)+' giờ');
+      n('attendanceTotalIncome',income.toLocaleString('vi-VN')+'đ');
+      n('attendanceAvgIncome',(hours?Math.round(income/hours):0).toLocaleString('vi-VN')+'đ / giờ');
+      const r=historyRange(doc);n('attendanceRangeText',`${r.from?labelVN(r.from):'Tất cả'} – ${r.to?labelVN(r.to):'tất cả'}`);
+      n('attendanceReportNote',`Bạn đã làm ${hours.toFixed(1).replace('.',',')} giờ và nhận ${income.toLocaleString('vi-VN')}đ trong khoảng thời gian đã chọn.`);
+    }
+
+    function wireAttendanceFilters(doc){
+      ['attendanceFrom','attendanceTo'].forEach(id=>doc.getElementById(id)?.addEventListener('change',loadAttendanceHistory));
+      const quick=doc.getElementById('attendanceQuickRange');
+      if(quick){quick.onchange=()=>{
+        const t=todayKey(),m=t.slice(0,7),monthStart=m+'-01';
+        let from=monthStart,to=addDays(mondayKey(t),6);
+        if(quick.value==='prev-month'){const d=localDate(monthStart);d.setUTCMonth(d.getUTCMonth()-1);from=`${d.getUTCFullYear()}-${pad(d.getUTCMonth()+1)}-01`;const e=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+1,0));to=`${e.getUTCFullYear()}-${pad(e.getUTCMonth()+1)}-${pad(e.getUTCDate())}`;}
+        else if(quick.value==='week'){from=mondayKey(t);to=addDays(from,6);}
+        else if(quick.value==='all'){from='';to='';}
+        doc.getElementById('attendanceFrom').value=from;doc.getElementById('attendanceTo').value=to;loadAttendanceHistory();
+      };}
+      const report=doc.querySelector('#view-attendance .attendance-filter .btn.primary');if(report)report.onclick=loadAttendanceHistory;
+    }
+
+    async function boot(){
+      try{
+        if(!(await authenticate()))return;
+        frame.src='./employee-v40.html?ui=v40-exact&runtime=1';
+        frame.addEventListener('load',async()=>{
+          const doc=frame.contentDocument;if(!doc)return;
+          patchIdentity(doc);
+          const originalShow=frame.contentWindow.showView;
+          if(typeof originalShow==='function'){
+            frame.contentWindow.showView=function(view,link){
+              originalShow.call(frame.contentWindow,view,link);
+              if(view==='schedule')loadSchedules();
+              if(view==='attendance'){renderAttendance();wireAttendanceFilters(doc);}
+            };
+          }
+          const logout=doc.querySelector('.drawer-logout');
+          if(logout){logout.onclick=null;logout.addEventListener('click',async()=>{const {error}=await sb.auth.signOut();if(error){setError(error.message);return;}window.location.replace('./index.html');});}
+          await loadSchedules();
+          wireAttendanceFilters(doc);
+        },{once:true});
+      }catch(e){setError(e.message||String(e));}
+    }
+
+    boot();
+  })();
+  </script>
+</body>
+</html>
