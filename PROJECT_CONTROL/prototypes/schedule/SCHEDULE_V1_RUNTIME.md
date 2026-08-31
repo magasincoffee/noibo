@@ -1,9 +1,8 @@
-# MAGASIN Lịch làm V1 — Runtime
+# MAGASIN — Lịch làm V1 — Runtime
 
-## Runnable page
-`web/schedule.html`
-
-The page is a standalone official-schedule viewer connected to the production Supabase project through the existing public publishable browser configuration.
+## Runnable product
+- `web/schedule.html` is a standalone official-schedule viewer connected to Supabase.
+- `web/schedule-ui.js` contains the same reader integrated into the authenticated app shell.
 
 ## Behavior
 - Authenticated users only.
@@ -26,9 +25,9 @@ The page is a standalone official-schedule viewer connected to the production Su
 `Workforce → Review → Publish → work_schedules(APPROVED) → Lịch làm → Chấm công`
 
 ## Runtime status
-- Supabase RPCs are deployed and callable.
-- Current database has 0 rows in `work_schedules`, so an authenticated viewer with no published schedules should see `Không có ca`.
-- Unauthenticated direct execution of the Manager RPC is rejected with `AUTH_REQUIRED`, confirming the auth boundary at the function entry point.
+- Supabase RPCs are deployed.
+- `work_schedules` currently has 0 rows in the inspected environment, so the reader correctly renders `Không có ca` until a schedule is published.
+- Unauthenticated direct execution of the Manager RPC is rejected with `AUTH_REQUIRED`.
 
-## Next integration
-The next production integration should replace the existing app's Employee schedule renderer with the V2 read contract and add the same official schedule reader into the Manager shell. The standalone page is intentionally usable as a safe runtime checkpoint while the protected main app remains on its existing branch/CI gate.
+## Integration status
+`web/schedule-ui.js` is committed to the schedule branch. The remaining main-shell loader change is held until the protected branch accepts the integration commit; no unrelated app.js behavior has been replaced.
