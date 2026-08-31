@@ -1,38 +1,21 @@
 name: Workforce V2 CI
 
-# Final integration checkpoint: keep scheduler, frontend syntax, and regression guards on every Workforce change.
-
 on:
   pull_request:
     branches: [main]
-    paths:
-      - 'index.html'
-      - 'scheduler/**'
-      - 'supabase/**'
-      - 'web/**'
-      - 'PROJECT_CONTROL/**'
-      - '.github/workflows/workforce-v2.yml'
+    paths: ['index.html','scheduler/**','supabase/**','web/**','PROJECT_CONTROL/**','.github/workflows/workforce-v2.yml']
   push:
     branches: [main, workforce-v2-integration]
-    paths:
-      - 'index.html'
-      - 'scheduler/**'
-      - 'supabase/**'
-      - 'web/**'
-      - 'PROJECT_CONTROL/**'
-      - '.github/workflows/workforce-v2.yml'
+    paths: ['index.html','scheduler/**','supabase/**','web/**','PROJECT_CONTROL/**','.github/workflows/workforce-v2.yml']
 
 jobs:
   scheduler:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: scheduler
+    defaults: {run: {working-directory: scheduler}}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with:
-          node-version: 20
+        with: {node-version: 20}
       - run: npm install --ignore-scripts
       - run: npm run check
       - run: npm test
@@ -42,20 +25,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - name: Syntax check Workforce frontend JS
+        with: {node-version: 20}
+      - name: Syntax and security contract checks
         shell: bash
         run: |
           set -euo pipefail
-          for f in web/app.js web/workforce-ui.js web/attendance-workforce-ui.js web/manager-workforce-ui.js web/shift-swap-workforce-ui.js web/schedule-ui-v2.js web/supabase-config.js web/security-runtime.js; do
-            node --check "$f"
-          done
+          for f in web/app.js web/workforce-ui.js web/attendance-workforce-ui.js web/manager-workforce-ui.js web/shift-swap-workforce-ui.js web/schedule-ui-v2.js web/supabase-config.js web/security-runtime.js; do node --check "$f"; done
           node <<'NODE'
           const fs=require('fs');
           const checks=[
             ['web/secure-app-runtime.html',['MAGASIN application','security-runtime.js']],
-            ['web/index.html',['supabase.auth.signUp','resetPasswordForEmail','PASSWORD_RECOVERY','updateUser({password','secure-app-runtime.html?target=employee','secure-app-runtime.html?target=manager']],
+            ['web/index.html',['sb.auth.signUp','resetPasswordForEmail','PASSWORD_RECOVERY','updateUser({password','secure-app-runtime.html?target=employee','secure-app-runtime.html?target=manager']],
             ['web/security-runtime.js',['MAGASIN_SECURITY','updateUser({password','Bảo mật tài khoản']],
             ['web/manager-workforce-ui.js',['validate_schedule_generation_v1','review_schedule_generation','publish_schedule_generation','Kiểm tra','Duyệt lịch','Phát hành']],
             ['supabase/migrations/20260828001600_attendance_schedule_link_v1.sql',['get_my_today_schedules','clock_in_for_schedule','clock_out_attendance','get_my_attendance_v2','APPROVED_SCHEDULE_NOT_FOUND']]
