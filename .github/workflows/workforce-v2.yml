@@ -55,6 +55,11 @@ jobs:
           grep -q "list_my_approved_schedules_v2.*weekArg" web/schedule.html
           ! grep -q "const arg={p_store_id" web/schedule.html
           grep -q "function employeeLabel" web/schedule.html
+          # Manager review/publish gate must stay bound to authoritative RPCs.
+          grep -q "validate_schedule_generation_v1" web/manager-workforce-ui.js
+          grep -q "review_schedule_generation" web/manager-workforce-ui.js
+          grep -q "publish_schedule_generation" web/manager-workforce-ui.js
+          grep -q "DRAFT → kiểm tra server-side → REVIEWED" web/manager-workforce-ui.js
 
       - name: Syntax check Employee V40 runtime bridge
         shell: bash
