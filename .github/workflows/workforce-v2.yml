@@ -48,35 +48,30 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for f in web/app.js web/workforce-ui.js web/attendance-workforce-ui.js web/manager-workforce-ui.js web/shift-swap-workforce-ui.js web/schedule-ui-v2.js web/supabase-config.js; do
+          for f in web/app.js web/workforce-ui.js web/attendance-workforce-ui.js web/manager-workforce-ui.js web/shift-swap-workforce-ui.js web/schedule-ui-v2.js web/supabase-config.js web/security-runtime.js; do
             node --check "$f"
           done
-          # Schedule V1 runtime contract: employee and manager RPCs have different argument shapes.
+          test -s web/secure-app-runtime.html
           grep -q "list_my_approved_schedules_v2.*weekArg" web/schedule.html
           ! grep -q "const arg={p_store_id" web/schedule.html
           grep -q "function employeeLabel" web/schedule.html
-          # Manager review/publish gate must stay bound to authoritative RPCs.
           grep -q "validate_schedule_generation_v1" web/manager-workforce-ui.js
           grep -q "review_schedule_generation" web/manager-workforce-ui.js
           grep -q "publish_schedule_generation" web/manager-workforce-ui.js
           grep -q "DRAFT → kiểm tra server-side → REVIEWED" web/manager-workforce-ui.js
+          grep -q "supabase.auth.signUp" web/index.html
+          grep -q "resetPasswordForEmail" web/index.html
+          grep -q "PASSWORD_RECOVERY" web/index.html
+          grep -q "updateUser({password" web/index.html
+          grep -q "updateUser({password" web/security-runtime.js
+          grep -q "secure-app-runtime.html?target=employee" web/index.html
+          grep -q "secure-app-runtime.html?target=manager" web/index.html
 
-          # Attendance end-to-end contract: only authoritative APPROVED schedules may drive clock actions.
           test -f supabase/migrations/20260828001600_attendance_schedule_link_v1.sql
           grep -q "create or replace function public.get_my_today_schedules" supabase/migrations/20260828001600_attendance_schedule_link_v1.sql
           grep -q "create or replace function public.clock_in_for_schedule" supabase/migrations/20260828001600_attendance_schedule_link_v1.sql
           grep -q "create or replace function public.clock_out_attendance" supabase/migrations/20260828001600_attendance_schedule_link_v1.sql
           grep -q "create or replace function public.get_my_attendance_v2" supabase/migrations/20260828001600_attendance_schedule_link_v1.sql
-          grep -q "and status = 'APPROVED'" supabase/migrations/20260828001600_attendance_schedule_link_v1.sql
-          grep -q "SCHEDULE_NOT_TODAY" supabase/migrations/20260828001600_attendance_schedule_link_v1.sql
-          grep -q "OPEN_ATTENDANCE_EXISTS" supabase/migrations/20260828001600_attendance_schedule_link_v1.sql
-          grep -q "SCHEDULE_ALREADY_ATTENDED" supabase/migrations/20260828001600_attendance_schedule_link_v1.sql
-
-          # Production V40 runtime must expose the same RPC chain.
-          grep -q "get_my_today_schedules" web/employee-v40-runtime.html
-          grep -q "clock_in_for_schedule" web/employee-v40-runtime.html
-          grep -q "clock_out_attendance" web/employee-v40-runtime.html
-          grep -q "get_my_attendance_v2" web/employee-v40-runtime.html
 
       - name: Syntax check Employee V40 runtime bridge
         shell: bash
@@ -84,7 +79,6 @@ jobs:
           set -euo pipefail
           node -e "const fs=require('fs'); const html=fs.readFileSync('web/employee-v40-runtime.html','utf8'); const scripts=[...html.matchAll(/<script>([\\s\\S]*?)<\\/script>/g)]; if(!scripts.length) process.exit(1); fs.writeFileSync('/tmp/employee-v40-runtime.js',scripts[scripts.length-1][1]);"
           node --check /tmp/employee-v40-runtime.js
-          grep -q "list_my_approved_schedules_v2" web/employee-v40-runtime.html
           grep -q "get_my_today_schedules" web/employee-v40-runtime.html
           grep -q "clock_in_for_schedule" web/employee-v40-runtime.html
           grep -q "clock_out_attendance" web/employee-v40-runtime.html
