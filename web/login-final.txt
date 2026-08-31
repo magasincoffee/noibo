@@ -1,0 +1,1 @@
+Single login entrypoint: /web/index.html.
