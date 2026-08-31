@@ -1,0 +1,1 @@
+The single production entry point is /web/index.html.
