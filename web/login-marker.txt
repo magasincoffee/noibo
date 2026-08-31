@@ -1,0 +1,1 @@
+Login UI is served by web/index.html so the authenticated role router remains the single entry point.
