@@ -61,6 +61,23 @@ jobs:
           grep -q "publish_schedule_generation" web/manager-workforce-ui.js
           grep -q "DRAFT → kiểm tra server-side → REVIEWED" web/manager-workforce-ui.js
 
+          # Attendance end-to-end contract: only authoritative APPROVED schedules may drive clock actions.
+          test -f supabase/migrations/20260828001600_attendance_schedule_link_v1.sql
+          grep -q "create or replace function public.get_my_today_schedules" supabase/migrations/20260828001600_attendance_schedule_link_v1.sql
+          grep -q "create or replace function public.clock_in_for_schedule" supabase/migrations/20260828001600_attendance_schedule_link_v1.sql
+          grep -q "create or replace function public.clock_out_attendance" supabase/migrations/20260828001600_attendance_schedule_link_v1.sql
+          grep -q "create or replace function public.get_my_attendance_v2" supabase/migrations/20260828001600_attendance_schedule_link_v1.sql
+          grep -q "and status = 'APPROVED'" supabase/migrations/20260828001600_attendance_schedule_link_v1.sql
+          grep -q "SCHEDULE_NOT_TODAY" supabase/migrations/20260828001600_attendance_schedule_link_v1.sql
+          grep -q "OPEN_ATTENDANCE_EXISTS" supabase/migrations/20260828001600_attendance_schedule_link_v1.sql
+          grep -q "SCHEDULE_ALREADY_ATTENDED" supabase/migrations/20260828001600_attendance_schedule_link_v1.sql
+
+          # Production V40 runtime must expose the same RPC chain.
+          grep -q "get_my_today_schedules" web/employee-v40-runtime.html
+          grep -q "clock_in_for_schedule" web/employee-v40-runtime.html
+          grep -q "clock_out_attendance" web/employee-v40-runtime.html
+          grep -q "get_my_attendance_v2" web/employee-v40-runtime.html
+
       - name: Syntax check Employee V40 runtime bridge
         shell: bash
         run: |
