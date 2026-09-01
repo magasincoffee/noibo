@@ -7,6 +7,10 @@
   const esc=v=>String(v??'').replace(/[&<>\"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[m]));
   let enabled=false;
 
+  function isCurrentEmployeeV40(){
+    return !!document.querySelector('#view-attendance .attendance-report-wrap');
+  }
+
   function styles(){
     if($('att-v2-styles'))return;
     const s=document.createElement('style');s.id='att-v2-styles';
@@ -71,6 +75,9 @@
     if(!b)return;
     e.preventDefault();e.stopImmediatePropagation();refresh();
   }
-  function init(){styles();enabled=true;document.addEventListener('click',capture,true);}
+  function init(){
+    if(isCurrentEmployeeV40())return;
+    styles();enabled=true;document.addEventListener('click',capture,true);
+  }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })(window,document);
